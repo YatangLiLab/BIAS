@@ -4,6 +4,10 @@ This is the official code repo for the work **BIAS: a Biologically Inspired Algo
 
 ---
 
+A demo has been added to the repository. You may clone the repository and simply run the `demo.ipynb` in an environment that satisfies the requirements in the BIAS folder, and an example saliency video would be created in the root folder.
+
+---
+
 To convert only one RGB video into an `.mp4` saliency map, just run:
 
 ```bash
