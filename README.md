@@ -24,3 +24,7 @@ We also have a code to process batches of images through `batch.py`. Currently, 
 cd ./src
 python ./batch.py
 ```
+
+---
+
+The training code, inference code, evaluation script, model configs, and some of the models are stored in the folder `MSTCN`. Currently, we do not provide the link to the dataset, but you may check and download it using `MSTCN/download_video.py` and convert it into `.npy` files for training.
