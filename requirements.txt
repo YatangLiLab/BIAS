@@ -1,0 +1,17 @@
+h5py
+jsonlines
+matplotlib
+numba
+numpy
+opencv_python
+pandas
+scipy=
+seaborn
+statsmodels
+tensorboard
+timm
+torch
+torchvision
+tqdm
+wandb
+yt_dlp
