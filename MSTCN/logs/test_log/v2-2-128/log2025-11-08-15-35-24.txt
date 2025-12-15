@@ -26,7 +26,7 @@
 [2025-11-08 15:35:25] [INFO] building optimizer with optimizer:AdamW
 [2025-11-08 15:35:25] [INFO] building scheduler with scheduler:StepLR
 [2025-11-08 15:35:25] [INFO] Resuming model
-[2025-11-08 15:35:25] [INFO] resume model from E:\Li Lab\MS-TCA\MyMSTCN\model\bestSal2\2025-08-18-21-26-32\best_model.pth
+[2025-11-08 15:35:25] [INFO] resume model from E:\YourPath(some logs are changed after generated only for anonymity)\MS-TCA\MyMSTCN\model\bestSal2\2025-08-18-21-26-32\best_model.pth
 [2025-11-08 15:35:26] [INFO] Resume success.
 [2025-11-08 15:35:26] [INFO] Prediction begins: 
 [2025-11-08 15:35:26] [INFO] Prediction set size: 279

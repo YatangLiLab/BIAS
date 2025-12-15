@@ -15,7 +15,7 @@ def parse_args():
     get args.
     """
     parse = argparse.ArgumentParser(description='essential parameters') 
-    parse.add_argument('--video_path', default="E:\\Li Lab\\itti_and_lif\\RealtimeSaliency\\test_video\\492.avi", type=str, help='path of sample video') 
+    parse.add_argument('--video_path', default="E:\\your_path\\RealtimeSaliency\\test_video\\492.avi", type=str, help='path of sample video') 
     parse.add_argument('--generate_name',default = "result_video\\492.mp4",type=str,help = 'default generate name')
     parse.add_argument('--total_height',default=9,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid,Itti default is 9')
     parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid, tried maximum param is 5')
@@ -121,7 +121,7 @@ def main(args:argparse.Namespace):
         elif args.output == "test":
             writer.write(np.uint8(rgb//4 * 3 + first_frame // 4))
         elif args.output == 'quad':
-            gt = cv2.imread(f"e:\\Li Lab\\itti_and_lif\\video\\annotation\\0{video_path[-7:-4]}\\maps\\0001.png")
+            gt = cv2.imread(f"E:\\your_path\\video\\annotation\\0{video_path[-7:-4]}\\maps\\0001.png")
             out_image_left = np.concatenate([rgb//4 * 3 + first_frame // 4, rgb//4 * 3 + first_frame // 4],0) # our result and itti's result
             out_image_right = np.concatenate([gt//4 * 3 + first_frame // 4,first_frame],0)
             out_image = np.uint8(np.concatenate([out_image_left, out_image_right],1))

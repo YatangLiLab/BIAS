@@ -258,9 +258,9 @@ if __name__ == "__main__":
 
 
     # we use a randomly chosen image to test if our function could behave well.
-    # test_img_path = "E:\\Li Lab\\itti_and_lif\\VAL_results\\non_opt_val\\0615\\0020.png"
+    # test_img_path = "E:\\your_path\\VAL_results\\non_opt_val\\0615\\0020.png"
 
-    test_img_path = "E:\\Li Lab\\itti_and_lif\\video\\annotation\\0001\\maps\\0001.png"
+    test_img_path = "E:\\your_path\\video\\annotation\\0001\\maps\\0001.png"
     img = cv2.imread(test_img_path, cv2.IMREAD_GRAYSCALE)
     #peaks = loop_for_multiple_gaussian_fitting(img)
     #show_peaks(img, peaks)

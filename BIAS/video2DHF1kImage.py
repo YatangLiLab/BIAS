@@ -4,11 +4,11 @@ import numpy as np
 import tqdm
 
 if __name__ == "__main__":
-    video_path = r'e:\Li Lab\itti_and_lif\Realtime_result\Levy'
-    tgt_path = r'e:\Li Lab\itti_and_lif\VAL_results\Levy'
+    video_path = r'E:\YourPath(some logs are changed after generated only for anonymity)\itti_and_lif\Realtime_result\Levy'
+    tgt_path = r'E:\YourPath(some logs are changed after generated only for anonymity)\itti_and_lif\VAL_results\Levy'
     if not os.path.exists(tgt_path): # create folder
         os.mkdir(tgt_path)
-    # true_vid_path = r'E:\Li Lab\itti_and_lif\video\annotation'
+    # true_vid_path = r'E:\YourPath(some logs are changed after generated only for anonymity)\itti_and_lif\video\annotation'
     # for filename in os.listdir(video_path):
     #     if filename.endswith(".mp4"):
     #         vid_num = int(filename.split('.')[0])

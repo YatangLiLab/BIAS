@@ -340,7 +340,7 @@ def parse_args():
     get args.
     """
     parse = argparse.ArgumentParser(description='essential parameters') 
-    parse.add_argument('--video_path', default="E:\\Li Lab\\itti_and_lif\\RealtimeSaliency\\test_video\\003.avi", type=str, help='path of sample video') 
+    parse.add_argument('--video_path', default="E:\\your_path\\RealtimeSaliency\\test_video\\003.avi", type=str, help='path of sample video') 
     parse.add_argument('--generate_name',default = "result_video\\for_test.mp4",type=str,help = 'default generate name')
     parse.add_argument('--total_height',default=9,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid,Itti default is 9')
     parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid, tried maximum param is 5')
@@ -371,9 +371,9 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    #video_path = "E:\\Li Lab\\itti_and_lif\\SAVAM\\Videos\\v01_Hugo_2172_left.avi"
-    video_path = "E:\\Li Lab\\itti_and_lif\\RealtimeSaliency\\test_video\\003.avi"
-    # video_path = "E:\\Li Lab\\itti_and_lif\\RealtimeSaliency\\test_video\\test_motion.mp4"
+    #video_path = "E:\\your_path\\SAVAM\\Videos\\v01_Hugo_2172_left.avi"
+    video_path = "E:\\your_path\\RealtimeSaliency\\test_video\\003.avi"
+    # video_path = "E:\\your_path\\RealtimeSaliency\\test_video\\test_motion.mp4"
     #video_path = "test_motion.mp4"
     #video_path = "checker.mp4"
     norm_lib = load_maximum_dll()

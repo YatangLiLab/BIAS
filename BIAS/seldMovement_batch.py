@@ -22,8 +22,8 @@ def run_script(paths):
 
 if __name__ == '__main__':
     # 要处理的数据
-    path = 'E:\\Li Lab\\itti_and_lif\\video\\video\\video'
-    another_path = 'E:\\Li Lab\\itti_and_lif\\Realtime_result\\OnlyStatic'
+    path = 'E:\\your_path\\video\\video\\video'
+    another_path = 'E:\\your_path\\Realtime_result\\OnlyStatic'
     data = get_filenames(path)
     another_data = get_filenames(another_path)
     datas = []

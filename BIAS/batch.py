@@ -86,8 +86,8 @@ def run_script_image(paths):
 
 if __name__ == '__main__':
     # 要处理的数据
-    path = 'E:\\Li Lab\\itti_and_lif\\video\\video\\video'
-    another_path = r'E:\Li Lab\itti_and_lif\Realtime_result\Levy'
+    path = 'E:\\your_path\\video\\video\\video'
+    another_path = r'E:\YourPath(some logs are changed after generated only for anonymity)\itti_and_lif\Realtime_result\Levy'
     if os.path.exists(f"{another_path}") == False:
         os.mkdir(f"{another_path}")
     data = get_filenames(path)# get_folder_names(path)# 

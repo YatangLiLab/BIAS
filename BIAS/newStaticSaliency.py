@@ -361,7 +361,7 @@ def parse_args():
     get args.
     """
     parse = argparse.ArgumentParser(description='essential parameters') 
-    parse.add_argument('--video_path', default="E:\\Li Lab\\itti_and_lif\\RealtimeSaliency\\test_video\\492.avi", type=str, help='path of sample video') 
+    parse.add_argument('--video_path', default="E:\\your_path\\RealtimeSaliency\\test_video\\492.avi", type=str, help='path of sample video') 
     parse.add_argument('--generate_name',default = "result_video\\492.mp4",type=str,help = 'default generate name')
     parse.add_argument('--total_height',default=9,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid,Itti default is 9')
     parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid, tried maximum param is 5')
@@ -469,11 +469,11 @@ if __name__ == "__main__":
     """
     test code
     """
-    # image = cv2.imread("e:\\Li Lab\\itti_and_lif\\test_jpgs\\bar.jpg")
+    # image = cv2.imread("E:\\your_path\\test_jpgs\\bar.jpg")
     path = 'C:\\Users\\10690\\Pictures\\sample_image.jpg'
     main(cv2.imread(path),args)
     quit()
-    path = 'E:\\Li Lab\\itti_and_lif\\self_designed_test_image\\re_design'#"e:\\Li Lab\\itti_and_lif\\self_designed_test_image\\design\\tmp_save"
+    path = 'E:\\your_path\\self_designed_test_image\\re_design'#"E:\\your_path\\self_designed_test_image\\design\\tmp_save"
     image_names = os.listdir(path)
     image_names = [os.path.join(path, img_name) for img_name in image_names if img_name.endswith(".JPG")]
     for img_name in image_names:

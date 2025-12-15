@@ -1,7 +1,7 @@
 import numpy
 import cv2
 import os
-def find_image(frame_idx, video_idx,path = 'E:\\Li Lab\\itti_and_lif\\video\\video\\video'):
+def find_image(frame_idx, video_idx,path = 'E:\\your_path\\video\\video\\video'):
     video_path = path + '\\'+ f'{video_idx:03d}' + '.avi'
     video = cv2.VideoCapture(video_path)
     idx = 0
@@ -14,7 +14,7 @@ def find_image(frame_idx, video_idx,path = 'E:\\Li Lab\\itti_and_lif\\video\\vid
             return frame
         idx += 1
         
-def find_gt(frame_idx, video_idx,path = 'E:\\Li Lab\\itti_and_lif\\video\\annotation'):
+def find_gt(frame_idx, video_idx,path = 'E:\\your_path\\video\\annotation'):
     gt_path = os.path.join(path, f'{video_idx:04d}','maps', f'{frame_idx:04d}')+'.png'
     gt_frame = cv2.imread(gt_path)
     return gt_frame
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         raise RuntimeError(f'wrong mode: {mode}')
     print(mode)
     model = input('model: \n')
-    model_path = 'E:\\Li Lab\\itti_and_lif\\VAL_results\\' + model
+    model_path = 'E:\\your_path\\VAL_results\\' + model
     os.mkdir(rst_folder := f'best_and_worst\\{model}')
     for i in range(5):  
         video_idx = int(input('video_idx: \n'))

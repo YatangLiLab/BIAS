@@ -85,7 +85,7 @@ def read_image(path:str,default_size:tuple)->np.uint8:
 
 def parse_args():
     parse = argparse.ArgumentParser(description='Essential parameters for gabor processing') 
-    parse.add_argument('--image_path', default="E:\\Li Lab\\itti_and_lif\\report_slides\\oldreport\\test_images\\standard.jpg", type=str, help='path of sample image') 
+    parse.add_argument('--image_path', default="E:\\your_path\\report_slides\\oldreport\\test_images\\standard.jpg", type=str, help='path of sample image') 
     parse.add_argument('--total_height',default=9,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid')
     parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid')
     parse.add_argument('--gabor_kernel_size',default=33,type=int,help='the minimal value of gabor kernel size. when meet some constrains, we would double some params.')

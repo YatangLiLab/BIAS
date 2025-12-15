@@ -17,7 +17,7 @@ def parse_args():
     """
     parse = argparse.ArgumentParser(description='essential parameters') 
     # 
-    parse.add_argument('--video_path', default="E:\\Li Lab\\itti_and_lif\\images", type=str, help='path of sample video') 
+    parse.add_argument('--video_path', default="E:\\your_path\\images", type=str, help='path of sample video') 
     parse.add_argument('--generate_name',default = "result_images",type=str,help = 'default generate name')
     parse.add_argument('--total_height',default=9,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid,Itti default is 9')
     parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid, tried maximum param is 5')
@@ -104,7 +104,7 @@ def main(args:argparse.Namespace):
             cv2.imwrite(os.path.join(folder_name,f"{1:04d}.png"),np.uint8(static_saliency_map//4 * 3 + first_frame // 4))
         elif args.output == 'quad':
             rgb = cv2.cvtColor(static_saliency_map,cv2.COLOR_GRAY2BGR)
-            gt = cv2.imread(f"e:\\Li Lab\\itti_and_lif\\video\\annotation\\0{video_path[-7:-4]}\\maps\\0001.png")
+            gt = cv2.imread(f"E:\\your_path\\video\\annotation\\0{video_path[-7:-4]}\\maps\\0001.png")
             out_image_left = np.concatenate([rgb//4 * 3 + first_frame // 4, rgb//4 * 3 + first_frame // 4],0) # our result and itti's result
             out_image_right = np.concatenate([gt//4 * 3 + first_frame // 4,first_frame],0)
             out_image = np.uint8(np.concatenate([out_image_left, out_image_right],1))
@@ -216,7 +216,7 @@ def main(args:argparse.Namespace):
                 cv2.imwrite(os.path.join(folder_name,f"{_count+1:04d}.png"),S_bar//4 * 3 + frame // 4)
             elif args.output == 'quad':
                 rgb = cv2.cvtColor(np.uint8(S_bar),cv2.COLOR_GRAY2BGR)
-                gt = cv2.imread(f"e:\\Li Lab\\itti_and_lif\\video\\annotation\\0{video_path[-7:-4]}\\maps\\{_count+2:04d}.png")
+                gt = cv2.imread(f"E:\\your_path\\video\\annotation\\0{video_path[-7:-4]}\\maps\\{_count+2:04d}.png")
                 itti_saliency = normalize_img(static_saliency_map,norm_lib)
                 itti_saliency = (itti_saliency - np.min(itti_saliency))/(np.max(itti_saliency) - np.min(itti_saliency) + 1e-6) * 255
                 itti_saliency = cv2.resize(itti_saliency,(width,height),interpolation=cv2.INTER_NEAREST)

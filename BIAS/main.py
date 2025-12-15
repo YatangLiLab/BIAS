@@ -125,7 +125,7 @@ def main(args:argparse.Namespace):
         elif args.output == "test":
             writer.write(np.uint8(rgb//4 * 3 + first_frame // 4))
         elif args.output == 'quad':
-            gt = cv2.imread(f"e:\\Li Lab\\itti_and_lif\\video\\annotation\\0{video_path[-7:-4]}\\maps\\0001.png")
+            gt = cv2.imread(f"E:\\your_path\\video\\annotation\\0{video_path[-7:-4]}\\maps\\0001.png")
             out_image_left = np.concatenate([rgb//4 * 3 + first_frame // 4, rgb//4 * 3 + first_frame // 4],0) # our result and itti's result
             out_image_right = np.concatenate([gt//4 * 3 + first_frame // 4,first_frame],0)
             out_image = np.uint8(np.concatenate([out_image_left, out_image_right],1))
@@ -293,7 +293,7 @@ def main(args:argparse.Namespace):
             elif args.output == "test":
                 writer.write(rgb//4 * 3 + frame // 4)
             elif args.output == 'quad':
-                gt = cv2.imread(f"e:\\Li Lab\\itti_and_lif\\video\\annotation\\0{video_path[-7:-4]}\\maps\\{_count+2:04d}.png")
+                gt = cv2.imread(f"E:\\your_path\\video\\annotation\\0{video_path[-7:-4]}\\maps\\{_count+2:04d}.png")
                 itti_saliency = normalize_img(static_saliency_map,norm_lib)
                 itti_saliency = (itti_saliency - np.min(itti_saliency))/(np.max(itti_saliency) - np.min(itti_saliency) + 1e-6) * 255
                 itti_saliency = cv2.resize(itti_saliency,(width,height),interpolation=cv2.INTER_NEAREST)
