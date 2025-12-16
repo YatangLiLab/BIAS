@@ -14,7 +14,7 @@ To convert only one RGB video into an `.mp4` saliency map, just run:
 cd ./src
 python ./main.py --video_path 'YOUR_VIDEO_PATH' --generate_name 'YOUR_TARGET_OUTPUT_PATH'
 ```
-Since we use the `OpenCV` video stream to load images, it is convenient to use any camera as long as it can be captured through `OpenCV`.
+Since we use the `OpenCV` video stream to load images, it is convenient to use any camera as long as it can be loaded through `OpenCV` or turned into a video stream input.
 
 If you want to process multiple videos, please use `src/batch.py`. The `images2images` mode is also available in `batch.py` and `main.py`; you may refer to the `argparse - help` code blocks for more information. 
 
