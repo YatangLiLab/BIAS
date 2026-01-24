@@ -5,7 +5,7 @@ numba
 numpy
 opencv_python
 pandas
-scipy=
+scipy
 seaborn
 statsmodels
 tensorboard
