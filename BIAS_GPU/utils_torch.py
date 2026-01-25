@@ -229,9 +229,6 @@ class TorchNormalization:
         self.device = device
 
     def normalize_img_torch(self, img: torch.Tensor, M: float = 1.0) -> torch.Tensor:
-        """
-        使用PyTorch实现图像归一化
-        """
         img_min = torch.min(img)
         img_max = torch.max(img)
         
@@ -239,17 +236,13 @@ class TorchNormalization:
             if img_min == 0:
                 return img
             else:
-                raise RuntimeError("奇怪的事情发生了")
+                raise RuntimeError("the max num = 0, and the min num are above zero??")
 
-        # 归一化到[0, M]
         if img_max - img_min != 0:
             normalized = (img - img_min) / (img_max - img_min) * M
         else:
-            normalized = img * 0  # 防止除零
+            normalized = img * 0 
         
-        # 计算局部最大值（简化版本，使用最大池化）
-        # 这里我们使用一个简化的版本，因为原始的find_maximum_mat依赖于DLL
-        # 我们使用最大池化来近似局部最大值检测
         if len(normalized.shape) == 2:
             normalized = normalized.unsqueeze(0).unsqueeze(0)  # 添加批次和通道维度
         elif len(normalized.shape) == 3:
@@ -308,15 +301,12 @@ class TorchNormalization:
 
 
 class TorchVideoProcessor:
-    """基于PyTorch的视频处理器类"""
+    """Torch based Video data processor"""
     
     def __init__(self, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.device = device
 
     def read_video(self, path: str) -> Tuple[cv2.VideoCapture, Tuple[int, int]]:
-        """
-        读取视频
-        """
         cap = cv2.VideoCapture(path)
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -324,98 +314,93 @@ class TorchVideoProcessor:
         return cap, final_shape
 
     def pre_processing_torch(self, image: np.ndarray, args: argparse.Namespace) -> torch.Tensor:
-        """
-        执行必要的预处理工作，返回PyTorch张量
-        """
-        # OpenCV预处理
         gray_image = cv2.cvtColor(cv2.resize(image, args.default_size), cv2.COLOR_BGR2GRAY)
-        # 转换为PyTorch张量并移动到指定设备
         tensor_image = torch.from_numpy(gray_image).float().to(self.device)
         return tensor_image
 
 
-class TorchInterferenceManager:
-    """基于PyTorch的干预管理器类"""
+# class TorchInterferenceManager:
+#     """基于PyTorch的干预管理器类"""
     
-    def __init__(self, device='cuda' if torch.cuda.is_available() else 'cpu'):
-        self.device = device
+#     def __init__(self, device='cuda' if torch.cuda.is_available() else 'cpu'):
+#         self.device = device
 
-    def get_gaussian_kernel_torch(self, ksize: int, sigma: float, dim: int = 2) -> torch.Tensor:
-        """
-        使用PyTorch创建高斯核
-        """
-        # 创建1D高斯核
-        coords = torch.arange(ksize, dtype=torch.float32, device=self.device) - (ksize - 1) / 2.0
-        gaussian_1d = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
-        gaussian_1d = gaussian_1d / gaussian_1d.sum()
+#     def get_gaussian_kernel_torch(self, ksize: int, sigma: float, dim: int = 2) -> torch.Tensor:
+#         """
+#         使用PyTorch创建高斯核
+#         """
+#         # 创建1D高斯核
+#         coords = torch.arange(ksize, dtype=torch.float32, device=self.device) - (ksize - 1) / 2.0
+#         gaussian_1d = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
+#         gaussian_1d = gaussian_1d / gaussian_1d.sum()
         
-        if dim == 1:
-            return gaussian_1d
-        elif dim == 2:
-            gaussian_2d = torch.outer(gaussian_1d, gaussian_1d)
-            return gaussian_2d
-        else:
-            raise NotImplementedError
+#         if dim == 1:
+#             return gaussian_1d
+#         elif dim == 2:
+#             gaussian_2d = torch.outer(gaussian_1d, gaussian_1d)
+#             return gaussian_2d
+#         else:
+#             raise NotImplementedError
 
-    def interference_function_torch(self, current_Saliency_map: torch.Tensor, 
-                                   former_fixation_point: Tuple[int, int], 
-                                   mode: str = "Gaussian", 
-                                   boxwidth_param: float = 0.2) -> torch.Tensor:
-        """
-        使用PyTorch实现干预函数
-        """
-        mat_shape = current_Saliency_map.shape
-        device = current_Saliency_map.device
+#     def interference_function_torch(self, current_Saliency_map: torch.Tensor, 
+#                                    former_fixation_point: Tuple[int, int], 
+#                                    mode: str = "Gaussian", 
+#                                    boxwidth_param: float = 0.2) -> torch.Tensor:
+#         """
+#         使用PyTorch实现干预函数
+#         """
+#         mat_shape = current_Saliency_map.shape
+#         device = current_Saliency_map.device
         
-        if mode == "Gaussian":
-            # 创建高斯核
-            gaussian_gen = TorchInterferenceManager(device)
-            long_gaussian = gaussian_gen.get_gaussian_kernel_torch(max(mat_shape)*2, max(mat_shape)/2, dim=1)
-            short_gaussian = gaussian_gen.get_gaussian_kernel_torch(min(mat_shape)*2, min(mat_shape)/2, dim=1)
-            Gaussian_kernal = torch.outer(short_gaussian.squeeze(), long_gaussian.squeeze())
+#         if mode == "Gaussian":
+#             # 创建高斯核
+#             gaussian_gen = TorchInterferenceManager(device)
+#             long_gaussian = gaussian_gen.get_gaussian_kernel_torch(max(mat_shape)*2, max(mat_shape)/2, dim=1)
+#             short_gaussian = gaussian_gen.get_gaussian_kernel_torch(min(mat_shape)*2, min(mat_shape)/2, dim=1)
+#             Gaussian_kernal = torch.outer(short_gaussian.squeeze(), long_gaussian.squeeze())
             
-            # 计算调整矩阵
-            row_start = min(mat_shape[0]) - former_fixation_point[0]
-            row_end = min(mat_shape[0]) + mat_shape[0] - former_fixation_point[0]
-            col_start = max(mat_shape[1]) - former_fixation_point[1]
-            col_end = max(mat_shape[1]) + mat_shape[1] - former_fixation_point[1]
+#             # 计算调整矩阵
+#             row_start = min(mat_shape[0]) - former_fixation_point[0]
+#             row_end = min(mat_shape[0]) + mat_shape[0] - former_fixation_point[0]
+#             col_start = max(mat_shape[1]) - former_fixation_point[1]
+#             col_end = max(mat_shape[1]) + mat_shape[1] - former_fixation_point[1]
             
-            # 处理边界情况
-            adjust_mat = torch.zeros_like(current_Saliency_map)
-            k_rows, k_cols = Gaussian_kernal.shape
+#             # 处理边界情况
+#             adjust_mat = torch.zeros_like(current_Saliency_map)
+#             k_rows, k_cols = Gaussian_kernal.shape
             
-            # 确定有效的索引范围
-            r_start = max(0, -row_start)
-            r_end = min(mat_shape[0], k_rows - row_start)
-            c_start = max(0, -col_start)
-            c_end = min(mat_shape[1], k_cols - col_start)
+#             # 确定有效的索引范围
+#             r_start = max(0, -row_start)
+#             r_end = min(mat_shape[0], k_rows - row_start)
+#             c_start = max(0, -col_start)
+#             c_end = min(mat_shape[1], k_cols - col_start)
             
-            kr_start = max(0, row_start)
-            kr_end = kr_start + (r_end - r_start)
-            kc_start = max(0, col_start)
-            kc_end = kc_start + (c_end - c_start)
+#             kr_start = max(0, row_start)
+#             kr_end = kr_start + (r_end - r_start)
+#             kc_start = max(0, col_start)
+#             kc_end = kc_start + (c_end - c_start)
             
-            if r_start < r_end and c_start < c_end and kr_start < kr_end and kc_start < kc_end:
-                adjust_mat[r_start:r_end, c_start:c_end] = Gaussian_kernal[kr_start:kr_end, kc_start:kc_end]
+#             if r_start < r_end and c_start < c_end and kr_start < kr_end and kc_start < kc_end:
+#                 adjust_mat[r_start:r_end, c_start:c_end] = Gaussian_kernal[kr_start:kr_end, kc_start:kc_end]
             
-            adjust_mat = adjust_mat / torch.max(adjust_mat)
-            weight_mat = adjust_mat * current_Saliency_map
+#             adjust_mat = adjust_mat / torch.max(adjust_mat)
+#             weight_mat = adjust_mat * current_Saliency_map
             
-        elif mode == "box":
-            adjust_mat = torch.ones_like(current_Saliency_map) * 0.1
-            upper_bound = int(max(0, former_fixation_point[0] - boxwidth_param * mat_shape[0]))
-            lower_bound = int(min(mat_shape[0], former_fixation_point[0] + boxwidth_param * mat_shape[0]))
-            left_bound = int(max(0, former_fixation_point[1] - boxwidth_param * mat_shape[1]))
-            right_bound = int(min(mat_shape[1], former_fixation_point[1] + boxwidth_param * mat_shape[1]))
-            adjust_mat[upper_bound:lower_bound, left_bound:right_bound] += 0.9
-            weight_mat = adjust_mat * current_Saliency_map
+#         elif mode == "box":
+#             adjust_mat = torch.ones_like(current_Saliency_map) * 0.1
+#             upper_bound = int(max(0, former_fixation_point[0] - boxwidth_param * mat_shape[0]))
+#             lower_bound = int(min(mat_shape[0], former_fixation_point[0] + boxwidth_param * mat_shape[0]))
+#             left_bound = int(max(0, former_fixation_point[1] - boxwidth_param * mat_shape[1]))
+#             right_bound = int(min(mat_shape[1], former_fixation_point[1] + boxwidth_param * mat_shape[1]))
+#             adjust_mat[upper_bound:lower_bound, left_bound:right_bound] += 0.9
+#             weight_mat = adjust_mat * current_Saliency_map
             
-        elif mode == "None":
-            weight_mat = current_Saliency_map
-        else:
-            raise NotImplementedError
+#         elif mode == "None":
+#             weight_mat = current_Saliency_map
+#         else:
+#             raise NotImplementedError
             
-        return weight_mat
+#         return weight_mat
 
 # class GPUDLLManager:
 #     """GPU DLL管理器类 - 管理与GPU相关的DLL功能"""

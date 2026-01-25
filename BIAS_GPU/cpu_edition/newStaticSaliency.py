@@ -164,52 +164,6 @@ def Itti_down_sampling(resized_image, args, ifshow = False):
 
     return rIs, Rs, Gs, Bs, Ys, rDs, Is
 
-# def Itti_down_sampling_PYROri(image, ifshow = False):
-#     """
-#     Only use one time Orientiation calculation, then filter
-#     """
-        
-#     resized_image = resize_to_normal_shape(image)
-
-#     b, g, r = seperate_RGB_chanells(resized_image)
-
-#     r_sigma = eight_pyrimid_built(r)
-#     g_sigma = eight_pyrimid_built(g)
-#     b_sigma = eight_pyrimid_built(b)
-#     I = [(r_sigma[i]/3+g_sigma[i]/3+b_sigma[i]/3) for i in range(9)]
-#     maximum = [np.max(I[i]) for i in range(9)]
-
-
-#     b = [np.where(b_sigma[i]>= 0.1 * maximum[i],b_sigma[i],0) for i in range(9)]
-#     g = [np.where(g_sigma[i]>= 0.1 * maximum[i],g_sigma[i],0) for i in range(9)]
-#     r = [np.where(r_sigma[i]>= 0.1 * maximum[i],r_sigma[i],0) for i in range(9)]
-
-#     Is = I
-#     Ds = [np.max(Is[0]) - single_I for single_I in Is]
-#     Rs = [r[i]-(g[i]/2+b[i]/2) for i in range(9)]
-#     Rs = [np.where(R>0,R,0) for R in Rs]
-#     Gs = [g[i]-(r[i]/2+b[i]/2) for i in range(9)]
-#     Gs = [np.where(G>0,G,0) for G in Gs]
-#     Bs = [b[i]-(g[i]/2+r[i]/2) for i in range(9)]
-#     Bs = [np.where(B>0,B,0) for B in Bs]
-#     Ys = [(r[i]/2+g[i]/2) - np.abs(r[i]/2 - g[i]/2) - b[i] for i in range(9)]
-#     Ys = [np.where(Y>0,Y,0) for Y in Ys]
-#     if ifshow:
-#         fig, ((ax1,ax2,ax3),(ax4,ax5,ax6)) = plt.subplots(2,3)
-#         ax1.imshow(Is[0])
-#         ax1.set_title("Intensity")
-#         ax4.imshow(Ds[0])
-#         ax4.set_title("Dark")
-#         ax2.imshow(Rs[0])
-#         ax2.set_title("Red")
-#         ax3.imshow(Bs[0])
-#         ax3.set_title("Blue")
-#         ax5.imshow(Gs[0])
-#         ax5.set_title("Green")
-#         ax6.imshow(Ys[0])
-#         ax6.set_title("Yellow")
-#         plt.show()
-#     return Is, Rs, Gs, Bs, Ys, Ds
 
 def Itti_feature_maps(Is,Rs,Gs,Bs,Ys,Ds,norm_lib,args,ifshow=False):
     # c_set = (2,3,4)
@@ -226,52 +180,7 @@ def Itti_feature_maps(Is,Rs,Gs,Bs,Ys,Ds,norm_lib,args,ifshow=False):
             I_dict[(c,c+delta)] = Is_scale(Is,Ds,c,c+delta)
             
             RG_dict[(c,c+delta)] = RG_scale(Rs,Gs,c,c+delta)
-            # fig, axs = plt.subplots(2,3)
-            # axs[0,0].imshow(Rs[c])
-            # axs[1,0].imshow(Rs[c+delta])
-            # axs[0,1].imshow(Gs[c])
-            # axs[1,1].imshow(Gs[c+delta])
-            # axs[0,2].imshow(RG_dict[(c,c+delta)][0])
-            # axs[1,2].imshow(RG_dict[(c,c+delta)][1])
-            # plt.show()
-            # fig, axs = plt.subplots(1,2)
-            # axs[0].imshow(normalize_img(RG_dict[(c,c+delta)][0],norm_lib))
-            # axs[1].imshow(normalize_img(RG_dict[(c,c+delta)][1],norm_lib))
-            # plt.show()
             BY_dict[(c,c+delta)] = BY_scale(Bs,Ys,c,c+delta)
-    #         color_max = max(np.max(RG_dict[(c,c+delta)]),np.max(BY_dict[(c,c+delta)]),color_max)
-    # for c in c_set:
-    #     for delta in delta_set:
-    #         RG_dict[(c,c+delta)] = (254 * RG_dict[(c,c+delta)][0]/color_max, 254 * RG_dict[(c,c+delta)][1]/color_max)
-    #         BY_dict[(c,c+delta)] = (254 * BY_dict[(c,c+delta)][0]/color_max, 254 * BY_dict[(c,c+delta)][1]/color_max)
-    if ifshow:
-        fig,axs = plt.subplots(6,len(c_set)*len(delta_set))
-        if len(c_set)*len(delta_set) == 1:
-            plt.suptitle(f"{(c_set[0],c_set[0]+delta_set[0])}")
-            axs[0].imshow(I:=normalize_img(I_dict[(c_set[0],c_set[0]+delta_set[0])][0],norm_lib))
-            axs[1].imshow(D:=normalize_img(I_dict[(c_set[0],c_set[0]+delta_set[0])][1],norm_lib))
-            axs[2].imshow(R:= normalize_img(RG_dict[(c_set[0],c_set[0]+delta_set[0])][0],norm_lib))
-            axs[3].imshow(G:=normalize_img(RG_dict[(c_set[0],c_set[0]+delta_set[0])][1],norm_lib))
-            axs[4].imshow(B:=normalize_img(BY_dict[(c_set[0],c_set[0]+delta_set[0])][0],norm_lib))
-            axs[5].imshow(Y:=normalize_img(BY_dict[(c_set[0],c_set[0]+delta_set[0])][1],norm_lib))
-            axs[0].set_title(f"I max = {np.max(I)}")
-            axs[1].set_title(f"D max = {np.max(D)}")
-            axs[2].set_title(f"R max = {np.max(R)}")
-            axs[3].set_title(f"G max = {np.max(G)}")
-            axs[4].set_title(f"B max = {np.max(B)}")
-            axs[5].set_title(f"Y max = {np.max(Y)}")
-            
-        else:
-            for ic, c in enumerate(c_set):
-                for id, d in enumerate(delta_set):
-                    axs[0,ic*len(delta_set) + id].imshow(normalize_img(I_dict[(c,c+d)][0],norm_lib))
-                    axs[0,ic*len(delta_set) + id].set_title({(c,c+d)})
-                    axs[1,ic*len(delta_set) + id].imshow(normalize_img(I_dict[(c,c+d)][1],norm_lib))
-                    axs[2,ic*len(delta_set) + id].imshow(normalize_img(RG_dict[(c,c+d)][0],norm_lib))
-                    axs[3,ic*len(delta_set) + id].imshow(normalize_img(RG_dict[(c,c+d)][1],norm_lib))
-                    axs[4,ic*len(delta_set) + id].imshow(normalize_img(BY_dict[(c,c+d)][0],norm_lib))
-                    axs[5,ic*len(delta_set) + id].imshow(normalize_img(BY_dict[(c,c+d)][1],norm_lib))
-        plt.show()
 
     return I_dict, RG_dict, BY_dict
 
@@ -291,17 +200,6 @@ def synthesis_conspicuous_map(I_dict, RG_dict, BY_dict,norm_lib,args,ifshow=Fals
     for c in c_set:
         for delta in delta_set:
             assert I_dict[(c,c+delta)][0].shape == I_dict[(c,c+delta)][1].shape == RG_dict[(c,c+delta)][0].shape == RG_dict[(c,c+delta)][1].shape == BY_dict[(c,c+delta)][0].shape == BY_dict[(c,c+delta)][1].shape
-            #long_edge_gaussian_kernal = cv2.getGaussianKernel(I_dict[(c,c+delta)][0].shape[0],I_dict[(c,c+delta)][0].shape[1]/3)
-            #short_edge_gaussian_kernal = cv2.getGaussianKernel(I_dict[(c,c+delta)][0].shape[1],I_dict[(c,c+delta)][0].shape[1]/3)
-            #long_edge_gaussian_kernal /= np.max(long_edge_gaussian_kernal)
-            #short_edge_gaussian_kernal /= np.max(short_edge_gaussian_kernal)
-
-            # plt.imshow(long_edge_gaussian_kernal * short_edge_gaussian_kernal.T)
-            # plt.show()
-            # plt.imshow(I_dict[(c,c+delta)][0])
-            # plt.show()
-            # plt.imshow(I_dict[(c,c+delta)][1])
-            # plt.show()
 
             I_bar = addition(I_bar, normalize_img(I_dict[(c,c+delta)][0],norm_lib))  # White
             I_bar = addition(I_bar, normalize_img(I_dict[(c,c+delta)][1],norm_lib))  # Black
@@ -309,38 +207,6 @@ def synthesis_conspicuous_map(I_dict, RG_dict, BY_dict,norm_lib,args,ifshow=Fals
             C_bar = addition(C_bar, normalize_img(RG_dict[(c,c+delta)][1],norm_lib)) # Green
             C_bar = addition(C_bar, normalize_img(BY_dict[(c,c+delta)][0],norm_lib)) # Blue
             C_bar = addition(C_bar, normalize_img(BY_dict[(c,c+delta)][1],norm_lib)) # Yellow
-            #I_bar = addition(I_bar,long_edge_gaussian_kernal * normalize_img(I_dict[(c,c+delta)][0],norm_lib) * short_edge_gaussian_kernal.T)  # White
-            #I_bar = addition(I_bar,long_edge_gaussian_kernal * normalize_img(I_dict[(c,c+delta)][1],norm_lib) * short_edge_gaussian_kernal.T)  # Black
-            #C_bar = addition(C_bar,long_edge_gaussian_kernal * normalize_img(RG_dict[(c,c+delta)][0],norm_lib) * short_edge_gaussian_kernal.T) # Red
-            #C_bar = addition(C_bar,long_edge_gaussian_kernal * normalize_img(RG_dict[(c,c+delta)][1],norm_lib) * short_edge_gaussian_kernal.T) # Green
-            #C_bar = addition(C_bar,long_edge_gaussian_kernal * normalize_img(BY_dict[(c,c+delta)][0],norm_lib) * short_edge_gaussian_kernal.T) # Blue
-            #C_bar = addition(C_bar,long_edge_gaussian_kernal * normalize_img(BY_dict[(c,c+delta)][1],norm_lib) * short_edge_gaussian_kernal.T) # Yellow
-            if ifshow:
-                # show all adding part:
-                fig, ((ax1,ax2,ax3,ax7),(ax4,ax5,ax6,ax8)) = plt.subplots(2,4)
-                #white = long_edge_gaussian_kernal * normalize_img(I_dict[(c,c+delta)][0],norm_lib) * short_edge_gaussian_kernal.T
-                white = normalize_img(I_dict[(c,c+delta)][0],norm_lib)
-                ax1.imshow(white)
-                ax1.set_title(f"White,max = {np.max(white)}")
-                #black = long_edge_gaussian_kernal * normalize_img(I_dict[(c,c+delta)][1],norm_lib) * short_edge_gaussian_kernal.T
-                ax4.imshow(black:=normalize_img(I_dict[(c,c+delta)][1],norm_lib) )
-                ax4.set_title(f"Black,max = {np.max(black)}")
-                #red = long_edge_gaussian_kernal * normalize_img(RG_dict[(c,c+delta)][0],norm_lib)* short_edge_gaussian_kernal.T
-                ax2.imshow(red:=normalize_img(RG_dict[(c,c+delta)][0],norm_lib) )
-                ax2.set_title(f"Red,max = {np.max(red)}")
-                #green = long_edge_gaussian_kernal * normalize_img(RG_dict[(c,c+delta)][1],norm_lib)* short_edge_gaussian_kernal.T
-                ax5.imshow(green:=normalize_img(RG_dict[(c,c+delta)][1],norm_lib) )
-                ax5.set_title(f"Green,max = {np.max(green)}")
-                #blue = long_edge_gaussian_kernal * normalize_img(BY_dict[(c,c+delta)][0],norm_lib)* short_edge_gaussian_kernal.T
-                ax3.imshow(blue:=normalize_img(BY_dict[(c,c+delta)][0],norm_lib) )
-                ax3.set_title(f"Blue,max = {np.max(blue)}")
-                #yellow = long_edge_gaussian_kernal * normalize_img(BY_dict[(c,c+delta)][1],norm_lib)* short_edge_gaussian_kernal.T
-                ax6.imshow(yellow:=normalize_img(BY_dict[(c,c+delta)][1],norm_lib) )
-                ax6.set_title(f"Yellow,max = {np.max(yellow)}")
-                # plt.show()
-                ax7.imshow(I_bar)
-                ax8.imshow(C_bar)
-                plt.show()
             
     return I_bar, C_bar
 
