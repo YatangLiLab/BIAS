@@ -178,7 +178,6 @@ def Itti_feature_maps(Is,Rs,Gs,Bs,Ys,Ds,norm_lib,args,ifshow=False):
     for c in c_set:
         for delta in delta_set:
             I_dict[(c,c+delta)] = Is_scale(Is,Ds,c,c+delta)
-            
             RG_dict[(c,c+delta)] = RG_scale(Rs,Gs,c,c+delta)
             BY_dict[(c,c+delta)] = BY_scale(Bs,Ys,c,c+delta)
 
