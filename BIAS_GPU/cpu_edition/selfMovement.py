@@ -7,21 +7,6 @@ from utils import *
 from image_saliency import Is_scale
 import time
 
-class Camera():
-    def __init__(self):
-        self.mov_dict = {"hori":0,"vert":0}
-        self.delta_t = 1/10 # the update factor of update value
-    def initialize(self,motion_lsts=[]):
-        self.mov_dict["hori"] = 0
-        self.mov_dict['vert'] = 0
-    def update(self,hori_value,vert_value):
-        # negative for leftward and upward, positive for rightward and downward
-        # should be put in as a series of numbers?
-        self.mov_dict["hori"] += self.delta_t * (hori_value - self.mov_dict["hori"])
-        self.mov_dict["vert"] += self.delta_t * (vert_value - self.mov_dict["vert"])
-        # print(self.mov_dict)
-        # update as v(t+1) = v(t) + (target - v(t))dt
-
 def simple_minus_separation(mat_lst1,mat_lst2):
     """
     simply use minus to find the true value of each point optic flow, not after calculating center-surrounding
@@ -72,9 +57,6 @@ def Intensity_processing(image,norm_lib,args,ifshow = False):
     Is = eight_pyrimid_built(image)
     Ds = [np.max(single_I) - single_I for single_I in Is]
 
-    #Is = [np.where(I - np.mean(I) > 0,I - np.mean(I),0) for I in Is]
-    #Ds = [np.where(D - np.mean(D) > 0,D - np.mean(D),0) for D in Is]
-
     c_set = args.motion_center
     delta_set = args.motion_surrounding
     I_dict = {}
@@ -100,13 +82,6 @@ def Intensity_processing(image,norm_lib,args,ifshow = False):
                 axs[1+2*i,j].set_title(f"I_dict[{(c_set[i],c_set[i]+delta_set[j])}][0]")
                 axs[2+2*i,j].imshow(I_dict[(c_set[i],c_set[i]+delta_set[j])][1])
                 axs[2+2*i,j].set_title(f"I_dict[{(c_set[i],c_set[i]+delta_set[j])}][1]")
-
-        # # plt.imshow(I_bar)
-        # fig, axs = plt.subplots(2,2)
-        # axs[0,0].imshow(image)
-        # axs[0,1].imshow(normalize_img(I_bar,norm_lib))
-        # axs[1,0].imshow(Is[0])
-        # axs[1,1].imshow(Ds[0])
         plt.show()
     return I_bar
 
@@ -158,9 +133,6 @@ def four_dir_sim(Is0,Is1,args,current_camera:Camera,ifshow = False)->np.array:
             padd_r_pair = np.pad(r_pair,1,mode='reflect')
             l, r = np.exp(-1/50 * l_pair) * tmp, np.exp(-1/50 * padd_r_pair[directions[dir_pair_index][0]+1 : directions[dir_pair_index][0]+1+shape[0],\
                                                                                       directions[dir_pair_index][1]+1 : directions[dir_pair_index][1]+1+shape[1]])*tmp
-            # l, r = cv2.GaussianBlur(l,(3,3),2), cv2.GaussianBlur(r,(3,3),2)
-            #lr_mean = (np.mean(l)+np.mean(r))/2
-            #l, r = l/(lr_mean+1e-7), r/(lr_mean+1e-7)
             l, r = np.where(l>0,l,0),np.where(r>0,r,0)
             #stable_img -= np.abs(l-r) * np.mean(current_frame)
             motion_dict[motion_list[dir_pair_index]].append(zero_edge(l))
@@ -180,41 +152,6 @@ def four_dir_sim(Is0,Is1,args,current_camera:Camera,ifshow = False)->np.array:
     tr = cv2.GaussianBlur(non_linear(tr),(3,3),2)
     not_stable = (tu)**2+(td)**2 + (tl**2)+(tr)**2 #cv2.GaussianBlur(non_linear(addition(not_stable0,not_stable1)),(3,3),2)
     current_camera.update(hori_value,vert_value)
-    if ifshow:
-        norm = Normalize(vmin = 0, vmax = max(np.max(tu),np.max(td),np.max(tl),np.max(tr)))
-        fig, ((ax1,ax2,ax5,im1),(ax3,ax4,ax6,im2),(bx1,bx2,bx3,bx4),(bx5,bx6,bx7,bx8)) = plt.subplots(4,4)
-        ax1.imshow(tr, cmap='viridis')#, norm=norm)
-        ax1.set_title("tr")
-        ax2.imshow(tl, cmap='viridis')#, norm=norm)
-        ax2.set_title("tl")
-        ax3.imshow(tu, cmap='viridis')#, norm=norm)
-        ax3.set_title("tu")
-        ax4.imshow(td, cmap='viridis')#, norm=norm)
-        # ax4.imshow(dy_image_d)
-        ax4.set_title("td")
-        ax6.imshow(not_stable)
-        im1.imshow(Is0[1])
-        im1.set_title("Is0[1]")
-        im2.imshow(Is1[1])
-        im2.set_title("Is1[1]")
-
-        bx1.imshow(motion_dict['rs'][0], cmap='viridis')#, norm=norm)
-        bx1.set_title("motion r0")
-        bx2.imshow(motion_dict['ls'][0], cmap='viridis')#, norm=norm)
-        bx2.set_title("motion l0")
-        bx3.imshow(motion_dict['us'][0], cmap='viridis')#, norm=norm)
-        bx3.set_title("motion u0")
-        bx4.imshow(motion_dict['ds'][0], cmap='viridis')#, norm=norm)
-        bx4.set_title("motion d0")
-        bx5.imshow(motion_dict['rs'][2], cmap='viridis')#, norm=norm)
-        bx5.set_title("motion r1")
-        bx6.imshow(motion_dict['ls'][2], cmap='viridis')#, norm=norm)
-        bx6.set_title("motion l1")
-        bx7.imshow(motion_dict['us'][2], cmap='viridis')#, norm=norm)
-        bx7.set_title("motion u1")
-        bx8.imshow(motion_dict['ds'][2], cmap='viridis')#, norm=norm)
-        bx8.set_title("motion d1")
-        plt.show()
     results = [tu,td,tl,tr, not_stable]
     return results
 
@@ -259,11 +196,7 @@ if __name__ == "__main__":
     fillIn_lib = initialize_fillIn_lib()
     tmp_save_diff = np.zeros((1,1))
     args = parse_args()
-    #video_path = "E:\\your_path\\SAVAM\\Videos\\v01_Hugo_2172_left.avi"
     video_path = args.video_path# "E:\\your_path\\RealtimeSaliency\\test_video\\001.avi"
-    # video_path = "E:\\your_path\\RealtimeSaliency\\test_video\\test_motion.mp4"
-    #video_path = "test_motion.mp4"
-    #video_path = "checker.mp4"
     norm_lib = load_maximum_dll()
     video_capture = cv2.VideoCapture(video_path)
     frame_number = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -301,9 +234,6 @@ if __name__ == "__main__":
                         control_list = [frame_intensity_pyramid] * max(time_list)
                         frame_count += 1
                         continue
-                        # control_list.append(np.float32(frame))
-                    # frame_count += 1
-                    # continue
                 current_frame = resize_to_normal_shape(frame)
                 current_frame = cv2.cvtColor(current_frame,cv2.COLOR_BGR2GRAY)
                 frame_intensity_pyramid = eight_pyrimid_built(current_frame)
@@ -314,12 +244,9 @@ if __name__ == "__main__":
                 maps = []
                 camera_moving_lst.append([])
                 for index, checkpoint in enumerate(args.default_checkpoint):
-        #    # print(len(control_list[0]))
                     results = four_dir_sim(control_list[0],control_list[checkpoint-1],args,camera_motion_lst[index])
                     grids = results[0].shape[1] * results[0].shape[0]
-                    # print(f"nonzeros are left {np.count_nonzero(results[2])}, right {np.count_nonzero(results[3])}, up{np.count_nonzero(results[0])}, down{np.count_nonzero(results[1])}")
-                    # camera_motion_lst[index].update(hori_value/grids,vert_value/grids)
-                    #print(f"camara status:{camera_motion_lst[index].mov_dict['hori']},{camera_motion_lst[index].mov_dict['vert']}")
+                
                     camera_moving_lst[-1].append((camera_motion_lst[index].mov_dict['hori'],camera_motion_lst[index].mov_dict['vert']))
 
                     motion_saliency_map = np.zeros((1,1))
@@ -328,77 +255,9 @@ if __name__ == "__main__":
                         # single_map = fill_blank(fillIn_lib,single_map,cv2.resize(current_frame,(single_map.shape[1],single_map.shape[0]),interpolation=cv2.INTER_NEAREST))
                         motion_saliency_map = addition(motion_saliency_map,Intensity_processing(single_map,norm_lib,args)**2)
                         maps.append(motion_saliency_map * args.decay_factor ** index)
-            # diff_time_scale_map = addition(diff_time_scale_map,normalize_img(eight_dir_processing(control_list[0],control_list[checkpoint])))
-                # diff_time_scale_map = sum(maps)
-                # diff_time_scale_map = normalize_img(diff_time_scale_map,norm_lib) 
-                # diff_time_scale_map = fill_blank(fillIn_lib,diff_time_scale_map,cv2.resize(current_frame,(diff_time_scale_map.shape[1],diff_time_scale_map.shape[0]),interpolation=cv2.INTER_NEAREST))
-                # diff_time_scale_map = non_linear(diff_time_scale_map)
-                # diff_time_scale_map = (diff_time_scale_map - np.min(diff_time_scale_map))/(np.max(diff_time_scale_map) - np.min(diff_time_scale_map)) * 255 if np.max(diff_time_scale_map) >0 else diff_time_scale_map
-                # diff_time_scale_map = np.where(diff_time_scale_map>np.percentile(diff_time_scale_map,90),diff_time_scale_map,0)
-                # output_diff = diff_time_scale_map if np.max(diff_time_scale_map) > np.max(tmp_save_diff) else tmp_save_diff
-                # tmp save technique
-                # tmp_save_diff = output_diff if np.max(diff_time_scale_map) > np.max(tmp_save_diff) else tmp_save_diff * 0.9
-                #plt.imshow(diff_time_scale_map)
-                #plt.show()
-                # output = cv2.resize(np.uint8(output_diff),final_shape,interpolation=cv2.INTER_NEAREST)
-                # output = cv2.cvtColor(output,cv2.COLOR_GRAY2BGR)
-                #plt.imshow(np.float32(output)*3/4/255 + np.float32(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))/4/255)
-                #plt.show()
-                #for time_ in time_list:
-                #    if frame_count != 0:
-                #        results = eight_dir_sim(control_list[-1],control_list[-time_],args)
-                #        motion_saliency_map = np.zeros((1,1))
-                #        for single_map in results:
-                #            motion_saliency_map = addition(motion_saliency_map,normalize_img(Intensity_processing(single_map,norm_lib,args),norm_lib))
-                            #motion_map = normalize_img(Intensity_processing(single_map))
-                        # plt.imshow(motion_map)
-                        # plt.show()
-                #    else:
-                #        pass
-                        #final_output = addition(final_output,per_pyramid_eight_DSC(control_list[-1],control_list[-time_])*(decay_factor**time_))
-                        #final_output = addition(final_output,eight_dir_sim(control_list[-1],control_list[-time_],args = 0)*(decay_factor**time_))
+ 
                 frame_count += 1
                 
-                    # tr, tl, tu, td = dir_motion_processing(control_list[-time_], control_list[-1])
-                    # itr, itl, itu, itd = map(Intensity_processing, [tr,tl,tu,td])
-                    # norm = Normalize(vmin=0,vmax=max(np.max(itr),np.max(itl),np.max(itu),np.max(itd)))
-                    # fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-                    # ax1.imshow(itr,norm=norm)
-                    # ax1.set_title("itr")
-                    # ax2.imshow(itl,norm=norm)
-                    # ax2.set_title("itl")
-                    # ax3.imshow(itu,norm=norm)
-                    # ax3.set_title("itu")
-                    # ax4.imshow(itd,norm=norm)
-                    # ax4.set_title("itd")
-                    # plt.suptitle(f"Time_ = {time_},frame = {frame_count}")
-                    # plt.show()
-                    #output_list.append(sum([normalize_img(itr),normalize_img(itl),normalize_img(itu),normalize_img(itd)]))
-                # norm_max = max(list(map(np.max,output_list)))+1e-6
-                # output_list = list(map(lambda x:np.uint8(250 * x / norm_max),output_list))
-                # frame_output = normalize_img(sum(list(map(normalize_img,output_list))))
-                # frame_output = Intensity_processing(frame_output)
-                # if frame_count == 0:
-                #    out_frame_list.append(frame_output/(1-gamma))
-                # out_frame_list.append(frame_output)
-                # out_frame_list[0] = out_frame_list[1] + out_frame_list[0] * gamma
-                # out_frame_list.pop()
-                #final_output = normalize_img(final_output)
-                # print(final_output)
-                # plt.imshow(final_output)
-                # plt.show()
-                #final_output = np.uint8(255 * final_output / (np.max(final_output)+1e-6))               
-                #final_output = cv2.resize(final_output,final_shape)
-                #final_output = cv2.cvtColor(final_output, cv2.COLOR_GRAY2BGR)
-                #final_output = np.uint8(final_output//4*3+frame//4)
-                #print(np.max(final_output))
-                #print(np.min(final_output))
-                
-                # writer.write(output//4 * 3 + frame//4)
-    # plt.scatter(np.array(camera_moving_lst)[:,0],np.array(camera_moving_lst)[:,1],c="red")
-    # plt.scatter(np.array(camera_moving_lst)[:,0],np.array(camera_moving_lst)[:,1],c="blue")
-    # plt.plot(np.array(camera_moving_lst)[:,0],np.array(camera_moving_lst)[:,1],c="red")
-    # plt.plot(np.array(camera_moving_lst)[:,0],np.array(camera_moving_lst)[:,1],c="blue")
     id = video_path.split('\\')[-1].split(".")[0]
     # plt.title(f"camera velocity for video {id}")
     # plt.show()

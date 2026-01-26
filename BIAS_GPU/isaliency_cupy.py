@@ -72,8 +72,6 @@ class ICpyrimid:
         self.args = args
         self.c_set = sorted(self.args.center)
         self.delta_set = sorted(self.args.surrounding)
-        self.theta_set = (0,45,90,135)
-        self.O_dict = {}
         self.cs_lst = [(c,c+d) for c in self.c_set for d in self.delta_set]
         self.cal_lst = list(set([c for (c,s) in self.cs_lst] + [s for (c,s) in self.cs_lst]))
         self.total_height = args.total_height
@@ -111,7 +109,7 @@ class ICpyrimid:
         self.ICs[0][..., 3] = cp.max(gaussian_img) - self.ICs[0][..., 0]
         self.ICs[0][..., 4] = gaussian_img[...,1]*1.5 - sum_
         self.ICs[0][..., 5] = (gaussian_img[...,1] + gaussian_img[...,2]) / 2 - cp.abs(gaussian_img[...,1] - gaussian_img[...,2]) / 2 - gaussian_img[...,1]
-        self.ICs[0] = cp.where(self.ICs[0]>0, self.ICs[0], 0) 
+        self.ICs[0] = cp.maximum(self.ICs[0],0)
         # print(Is.shape) # (240, 320)
         self.build_pyramid.eight_pyramid_built_3d(self.ICs)
         # for i in range(8):
@@ -119,10 +117,10 @@ class ICpyrimid:
         #     print(cp.sum(self.ICs[i]))
     
     def scaling(self, c,s):
-        tmp = self.img_process.subtraction_torch(self.ICs[c][:,:,:3] - self.ICs[c][:,:,3:], self.ICs[s][:,:,:3] - self.ICs[s][:,:,3:])
-        tmp -= cp.mean(tmp, axis=(0,1), keepdims=True)
-        self.scaling_dict[(c,s)] = cp.concatenate((tmp, -tmp), axis=-1)
-        self.scaling_dict[(c,s)] = cp.where(self.scaling_dict[(c,s)]>0, self.scaling_dict[(c,s)], 0)
+        diff = self.ICs[c][:,:,:3] - self.ICs[c][:,:,3:]
+        diff = self.img_process.subtraction_torch(diff, self.ICs[s][:,:,:3] - self.ICs[s][:,:,3:])
+        diff -= cp.mean(diff, axis=(0,1), keepdims=True)
+        self.scaling_dict[(c,s)] = cp.concatenate((cp.maximum(diff, 0), cp.maximum(-diff, 0)), axis=2)
         
 
     def diff_process(self):
