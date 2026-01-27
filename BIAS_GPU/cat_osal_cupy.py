@@ -1,73 +1,73 @@
 import numpy as np
 import cupy as cp
 import argparse
-from cupyx.scipy.ndimage import convolve1d
-from utils_cupy import CupyImageProcessing, cpnormalize_img
+from cupyx.scipy.ndimage import convolve1d, convolve
+from utils_cupy import CupyImageProcessing, cpnormalize_img, cpnormalize_img3d_dict, cpnormalize_img3d
 import cv2
 
-class GaborFilter:
-    def __init__(self, frequency: float, theta: float, sigma: float = None, ksize: int = 15, mode='reflect'):
-        """
-        Precompute separable Gabor filter components for efficient reuse.
-        
-        Args:
-            frequency: spatial frequency (cycles per pixel)
-            theta: orientation in radians
-            sigma: standard deviation of Gaussian envelope; if None, set to 2π / frequency
-            ksize: half-kernel size (full kernel = 2*ksize + 1)
-            mode: boundary mode for convolve1d ('constant', 'reflect', etc.)
-        """
+
+class CatGaborFilter:
+    def __init__(self, frequency: float, theta_lst: list[float], sigma: float = None, ksize: int = 15, mode='reflect'):
         self.frequency = frequency
-        self.theta = theta
+        self.theta_lst = cp.asarray(theta_lst, dtype=cp.float16)
         self.ksize = ksize
         self.mode = mode
         
         if sigma is None:
-            sigma = 2 * cp.pi / frequency  # heuristic from literature
+            sigma = 2 * 3.1415926545 / frequency
         self.sigma = sigma
 
-        # Build 1D coordinate
         x = cp.arange(-ksize, ksize + 1, dtype=cp.float16)
-        
-        # Gaussian envelope
         gauss = cp.exp(-x**2 / (2.0 * sigma**2))
         
-        # Projected frequency along filter axis
-        freq_x = frequency * cp.cos(theta)
-        freq_y = frequency * cp.sin(theta)
-        
-        # Real and imaginary parts of 1D Gabor kernels
-        self.kernel_x_real = (gauss * cp.cos(2 * cp.pi * freq_x * x)).astype(cp.float16)
-        self.kernel_x_imag = (gauss * cp.sin(2 * cp.pi * freq_x * x)).astype(cp.float16)
-        
-        self.kernel_y_real = (gauss * cp.cos(2 * cp.pi * freq_y * x)).astype(cp.float16)
-        self.kernel_y_imag = (gauss * cp.sin(2 * cp.pi * freq_y * x)).astype(cp.float16)
+        self.kernels = []
+        for theta in theta_lst:
+            fx = frequency * cp.cos(cp.deg2rad(theta))
+            fy = frequency * cp.sin(cp.deg2rad(theta))
+            
+            # 先用 float32 计算，再转成 float16 存储用于卷积
+            kx_real = (gauss * cp.cos(2 * cp.pi * fx * x)).astype(cp.float16)
+            kx_imag = (gauss * cp.sin(2 * cp.pi * fx * x)).astype(cp.float16)
+            ky_real = (gauss * cp.cos(2 * cp.pi * fy * x)).astype(cp.float16)
+            ky_imag = (gauss * cp.sin(2 * cp.pi * fy * x)).astype(cp.float16)
+            
+            self.kernels.append({
+                'kx_re': kx_real, 'kx_im': kx_imag,
+                'ky_re': ky_real, 'ky_im': ky_imag
+            })
 
     def __call__(self, image: cp.ndarray) -> cp.ndarray:
-        """
-        Apply Gabor filter to a 2D image (H, W).
+        if image.ndim == 3:
+            image = image[:, :, 0]
         
-        Returns:
-            Magnitude response: sqrt(real^2 + imag^2), shape (H, W)
-        """
-        assert image.ndim == 2, "Input must be 2D (H, W)"
-        image = image.astype(cp.float16)
-
-        # Step 1: Filter along x (columns) → intermediate complex response
-        real_x = convolve1d(image, self.kernel_x_real, axis=1, mode=self.mode)
-        imag_x = convolve1d(image, self.kernel_x_imag, axis=1, mode=self.mode)
-
-        # Step 2: Filter real_x and imag_x along y (rows)
-        real_final = convolve1d(real_x, self.kernel_y_real, axis=0, mode=self.mode) \
-                   - convolve1d(imag_x, self.kernel_y_imag, axis=0, mode=self.mode)
-        imag_final = convolve1d(real_x, self.kernel_y_imag, axis=0, mode=self.mode) \
-                   + convolve1d(imag_x, self.kernel_y_real, axis=0, mode=self.mode)
-
-        # Step 3: Compute magnitude
-        magnitude = cp.sqrt(real_final * real_final + imag_final * imag_final)
-        return magnitude
-
-
+        # 将输入图像转换为 float16
+        # 如果图像原本是 uint8 (0-255)，建议先归一化或直接转 float16
+        image = image.astype(cp.float16) / 255.0
+        # image = image.astype(cp.float16) 
+        
+        H, W = image.shape
+        C = len(self.kernels)
+        
+        # 预分配 float16 的输出容器
+        magnitudes = cp.empty((H, W, C), dtype=cp.float16)
+        
+        for i, k in enumerate(self.kernels):
+            # 这里的 convolve1d 会根据输入自动选择 float16 计算
+            tmp_re = convolve1d(image, k['kx_re'], axis=1, mode=self.mode)
+            tmp_im = convolve1d(image, k['kx_im'], axis=1, mode=self.mode)
+            
+            # 复数乘法逻辑： (A+Bi)(C+Di) = (AC-BD) + (AD+BC)i
+            real_final = convolve1d(tmp_re, k['ky_re'], axis=0, mode=self.mode) - \
+                         convolve1d(tmp_im, k['ky_im'], axis=0, mode=self.mode)
+                         
+            imag_final = convolve1d(tmp_re, k['ky_im'], axis=0, mode=self.mode) + \
+                         convolve1d(tmp_im, k['ky_re'], axis=0, mode=self.mode)
+            
+            # 使用 float16 计算幅值
+            magnitudes[:, :, i] = cp.sqrt(real_final**2 + imag_final**2)
+            
+        return magnitudes
+        
 
 class Orientation_Saliency:
     def __init__(self, args):
@@ -88,75 +88,41 @@ class Orientation_Saliency:
         self.image_processing = CupyImageProcessing()
         self.gabor_filters = []
         for level in range(self.total_height - self.pyramid_height+1):
-            self.gabor_filters.append([GaborFilter(frequency=default_freq, theta=theta/180*cp.pi, sigma=kernal_size,ksize=kernal_size) for theta in self.theta_set])
+            self.gabor_filters.append(CatGaborFilter(frequency=default_freq, theta_lst=self.theta_set, sigma=kernal_size,ksize=kernal_size))
             default_freq /= 2
             kernal_size = round(cp.pi / default_freq) + 1
 
     def reset(self):
-        self.Os = [[None] * self.args.total_height for _ in self.theta_set]
+        self.Os = [None] * self.args.total_height # each of them correspond to a (H,W,C) tensor, C means channels = 'thetas'
         for c,s in self.cs_lst:
-            for theta in self.theta_set:
-                self.O_dict[(c,s,theta)] = None # initialize
+            self.O_dict[(c,s)] = None # initialize
     
-    def O_c_s_theta(self,c,s,theta):
-        theta_idx = theta // 45  # Convert angle to index (0->0, 45->1, 90->2, 135->3)
-        return cp.abs(self.image_processing.subtraction_torch(self.Os[theta_idx][c], self.Os[theta_idx][s]))
+    def O_c_s_theta(self,c,s):
+        # theta_idx = theta // 45  # Convert angle to index (0->0, 45->1, 90->2, 135->3)
+        return cp.abs(self.image_processing.subtraction_torch(self.Os[c], self.Os[s]))
     
-    def Orientation_maps(self,ifshow=False):
+    def Orientation_maps(self):
         for c,s in self.cs_lst:
-            for theta in self.theta_set:
-                self.O_dict[(c,s,theta)] = self.O_c_s_theta(c,s,theta)
-        if ifshow:
-            raise NotImplementedError('not implement if show methods now')
+            self.O_dict[(c,s)] = self.O_c_s_theta(c,s)
     
-    def synthesis_O_map(self, ifshow=False):
-        # Initialize with the proper shape from the first element
-        first_key = list(self.O_dict.keys())[0]  # Get first key to get the shape
-        if self.O_dict[first_key] is not None:
-            shape = self.O_dict[first_key].shape[:2]  # Get spatial dimensions
-        else:
-            # Fallback to a default shape if no elements exist
-            shape = (240, 320)  # Default shape
-        
-        O_bar_0 =  cp.zeros((1,1), dtype=cp.float16)
-        O_bar_45 = cp.zeros((1,1), dtype=cp.float16)
-        O_bar_90 = cp.zeros((1,1), dtype=cp.float16)
-        O_bar_135= cp.zeros((1,1), dtype=cp.float16)
-        # O_bar_0 = cp.zeros((1,1,1), dtype=cp.float32)#((shape+(1)), dtype=cp.float32)
-        
+    def synthesis_O_map(self):
+        cpnormalize_img3d_dict(self.O_dict)
+        O_bars = cp.zeros((1,1,1), dtype=cp.float16) #((shape+(1)), dtype=cp.float32)
         for c, s in self.cs_lst:
-            # if (c, s, 0) in self.O_dict and self.O_dict[(c, s, 0)] is not None:
-            O_bar_0 = self.image_processing.addition_torch(O_bar_0, cpnormalize_img(self.O_dict[(c, s, 0)]))
-            # if (c, s, 45) in self.O_dict and self.O_dict[(c, s, 45)] is not None:
-            O_bar_45 = self.image_processing.addition_torch(O_bar_45, cpnormalize_img(self.O_dict[(c, s, 45)]))
-            # if (c, s, 90) in self.O_dict and self.O_dict[(c, s, 90)] is not None:
-            O_bar_90 = self.image_processing.addition_torch(O_bar_90, cpnormalize_img(self.O_dict[(c, s, 90)]))
-            # if (c, s, 135) in self.O_dict and self.O_dict[(c, s, 135)] is not None:
-            O_bar_135 = self.image_processing.addition_torch(O_bar_135, cpnormalize_img(self.O_dict[(c, s, 135)]))
-            # print('=======================================')
-            # print(cp.sum(O_bar_0),cp.sum(O_bar_45),cp.sum(O_bar_90),cp.sum(O_bar_135))
-            # print(cp.sum(self.O_dict[(c, s, 0)]  - cp.min(self.O_dict[(c,s,0  )])),
-            #      cp.sum(self.O_dict[(c, s, 45)]  - cp.min(self.O_dict[(c,s,45 )])),
-            #      cp.sum(self.O_dict[(c, s, 90)]  - cp.min(self.O_dict[(c,s,90 )])),
-            #      cp.sum(self.O_dict[(c, s, 135)] - cp.min(self.O_dict[(c,s,135)])))
-            # print('=======================================')
-        return sum(map(cpnormalize_img, [O_bar_0, O_bar_45, O_bar_90, O_bar_135]))
+            O_bars = self.image_processing.addition_torch(O_bars, self.O_dict[(c, s)])
+        return cp.sum(cpnormalize_img3d(O_bars), axis=2)
     
     def build_pyramid(self, Is:list[cp.uint8]):
         for idx in range(1,self.pyramid_height):
             if idx not in self.cal_lst:
-                for _ in range(len(self.theta_set)):
-                    self.Os[_][idx] = (cp.zeros((1,1)))
+                self.Os[idx] = (cp.zeros((1,1, 1)))
             else:
-                for _ in range(len(self.theta_set)):
-                    self.Os[_][idx] = (self.gabor_filters[0][_](Is[idx][:,:,0].copy())) # using the Is from the isaliency cupy
+                self.Os[idx] = (self.gabor_filters[0](Is[idx][:,:,:1])) # using the Is from the isaliency cupy
         for idx in range(self.pyramid_height,self.total_height):
             if idx not in self.cal_lst:
-                for _ in range(len(self.theta_set)):
-                    self.Os[_][idx] = (cp.zeros((1,1)))
+                self.Os[idx] = (cp.zeros((1,1, 1)))
             else:
-                for _ in range(len(self.theta_set)):
-                    self.Os[_][idx] = (self.gabor_filters[idx-self.pyramid_height+1][_](Is[idx][:,:,0].copy())) # using the Is from the isaliency cupy
+                self.Os[idx] = (self.gabor_filters[idx-self.pyramid_height+1](Is[idx][:,:,:1])) # using the Is from the isaliency cupy
 
 
 if __name__ == '__main__':
@@ -213,15 +179,15 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     orientations = [0, 45, 90, 135]
     
-    base_image = icpyramid.ICs[0][..., 0]  # Use the first channel of the base level
+    base_image = icpyramid.ICs[0][..., :1]  # Use the first channel of the base level
     
     for idx, theta in enumerate(orientations):
         row = idx // 2
         col = idx % 2
         
         # Apply the corresponding Gabor filter
-        gabor_filter = Ori_processing.gabor_filters[0][idx]  # First level filters
-        filtered_result = gabor_filter(base_image)
+        gabor_filter = Ori_processing.gabor_filters[0] # First level filters
+        filtered_result = gabor_filter(base_image)[:,:,idx] 
         
         im = axes[row, col].imshow(cp.asnumpy(filtered_result), cmap='gray')
         axes[row, col].set_title(f'Gabor Filter: {theta}°\nShape: {filtered_result.shape}')
@@ -241,30 +207,25 @@ if __name__ == '__main__':
     # Visualize some of the orientation contrast maps (O_dict contents)
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # Show some (c,s,theta) combinations
-    cs_theta_combinations = [(c, s, theta) for c, s in Ori_processing.cs_lst[:2] for theta in orientations]  # Limit to first few
-    for idx, (c, s, theta) in enumerate(cs_theta_combinations[:4]):  # Show first 4
-        if idx >= 4:
-            break
-        row = idx // 2
-        col = idx % 2
-        
-        if (c, s, theta) in Ori_processing.O_dict and Ori_processing.O_dict[(c, s, theta)] is not None:
-            result = Ori_processing.O_dict[(c, s, theta)]
-            im = axes[row, col].imshow(cp.asnumpy(result), cmap='hot')
-            axes[row, col].set_title(f'O_dict[{c},{s},{theta}°]\nShape: {result.shape}')
-            axes[row, col].axis('off')
-            plt.colorbar(im, ax=axes[row, col], fraction=0.046, pad=0.04)
-        else:
-            axes[row, col].text(0.5, 0.5, f'Missing:\n({c},{s},{theta}°)', 
-                               horizontalalignment='center', verticalalignment='center',
-                               transform=axes[row, col].transAxes, fontsize=12)
-            axes[row, col].axis('off')
+    # Show some (c,s) combinations
+    cs_combinations = [(c, s) for c, s in Ori_processing.cs_lst[:2]]  # Limit to first few
+    for (c, s) in cs_combinations[:4]:  # Show first 4
+        for idx in range(4):
+            row = idx // 2
+            col = idx % 2
+
+            if (c, s) in Ori_processing.O_dict and Ori_processing.O_dict[(c, s)] is not None:
+                result = Ori_processing.O_dict[(c, s)]
+                im = axes[row, col].imshow(cp.asnumpy(result[..., idx]), cmap='hot')
+                axes[row, col].set_title(f'O_dict[{c},{s}]\nShape: {result.shape}')
+                axes[row, col].axis('off')
+                plt.colorbar(im, ax=axes[row, col], fraction=0.046, pad=0.04)
+            else:
+                axes[row, col].text(0.5, 0.5, f'Missing:\n({c},{s})', 
+                                   horizontalalignment='center', verticalalignment='center',
+                                   transform=axes[row, col].transAxes, fontsize=12)
+                axes[row, col].axis('off')
     
-    # Hide unused subplots
-    for idx in range(len(cs_theta_combinations), 4):
-        if idx < 4:
-            axes[idx // 2, idx % 2].axis('off')
     
     plt.tight_layout()
     plt.savefig('/mnt/e/Li Lab/CVPR_rebuttal_/BIAS-a-Biologically-Inspired-Algorithm-for-video-Saliency-detection/orientation_contrast_maps.png', dpi=150, bbox_inches='tight')

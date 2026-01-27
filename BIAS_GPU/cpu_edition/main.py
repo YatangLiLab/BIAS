@@ -100,7 +100,7 @@ def main(args:argparse.Namespace):
     I_bar, C_bar = synthesis_conspicuous_map(I_dict, RG_dict, BY_dict,norm_lib,args)
     I_bar, C_bar = normalize_img(I_bar,norm_lib),normalize_img(C_bar,norm_lib)
     O_bar = normalize_img(O_bar_synthesis(Is.copy(),args,gabor_lib,norm_lib),norm_lib)
-    static_saliency_map = addition(I_bar/(np.sum(I_bar)+1e-3)+ C_bar/(np.sum(C_bar)+1e-3), (O_bar/np.sum(O_bar)+1e-3))
+    static_saliency_map = addition(I_bar/(np.sum(I_bar)+1e-2)+ C_bar/(np.sum(C_bar)+1e-2), (O_bar/np.sum(O_bar)+1e-2))
     static_saliency_map = cv2.resize(static_saliency_map, (width,height))
     static_saliency_map = cv2.normalize(static_saliency_map, None, 0, 255, cv2.NORM_MINMAX) # minmax coding
 
@@ -157,7 +157,7 @@ def main(args:argparse.Namespace):
 
 
         O_bar = normalize_img(O_bar_synthesis(Is.copy(),args,gabor_lib,norm_lib),norm_lib)
-        static_saliency_map = addition(I_bar/(np.sum(I_bar)+1e-3)+ C_bar/(np.sum(C_bar)+1e-3), (O_bar/np.sum(O_bar)+1e-3))
+        static_saliency_map = addition(I_bar/(np.sum(I_bar)+1e-2)+ C_bar/(np.sum(C_bar)+1e-2), (O_bar/np.sum(O_bar)+1e-2))
         # now we have finished calculating static saliency map.
 
         control_list.pop()
@@ -196,8 +196,8 @@ def main(args:argparse.Namespace):
 
         if args.continuity:
             if _count == 0:
-                tmp_static = norm_static / max((1-tmp_save_factor),1e-6)
-                tmp_dynamic = norm_dynamic / max((1-tmp_save_factor),1e-6)
+                tmp_static = norm_static / max((1-tmp_save_factor),1e-2)
+                tmp_dynamic = norm_dynamic / max((1-tmp_save_factor),1e-2)
             else:
                 tmp_static = tmp_static * tmp_save_factor + norm_static
                 tmp_dynamic = tmp_dynamic * tmp_save_factor + norm_dynamic
@@ -213,7 +213,7 @@ def main(args:argparse.Namespace):
         else:
             raise RuntimeError(f"not defined generatetype of {args.generate_type}")
         S_bar = multation(alpha + norm_static , beta + norm_dynamic) - alpha * beta
-        S_bar = np.uint8((S_bar - np.min(S_bar))/(np.max(S_bar) - np.min(S_bar)+1e-4) * 255)
+        S_bar = np.uint8((S_bar - np.min(S_bar))/(np.max(S_bar) - np.min(S_bar)+1e-2) * 255)
         # S_bar = cv2.normalize(S_bar, None, 0, 255, cv2.NORM_MINMAX)
         S_bar = cv2.resize(S_bar,(width,height),interpolation=cv2.INTER_NEAREST)
         #S_bar = interference_function(S_bar, (height//2,width//2)) # add central gaussian 
@@ -266,7 +266,7 @@ def main(args:argparse.Namespace):
             elif args.output == 'quad':
                 gt = cv2.imread(f"E:\\your_path\\video\\annotation\\0{video_path[-7:-4]}\\maps\\{_count+2:04d}.png")
                 itti_saliency = normalize_img(static_saliency_map,norm_lib)
-                itti_saliency = (itti_saliency - np.min(itti_saliency))/(np.max(itti_saliency) - np.min(itti_saliency) + 1e-6) * 255
+                itti_saliency = (itti_saliency - np.min(itti_saliency))/(np.max(itti_saliency) - np.min(itti_saliency) + 1e-2) * 255
                 itti_saliency = cv2.resize(itti_saliency,(width,height),interpolation=cv2.INTER_NEAREST)
                 #S_bar = interference_function(S_bar, (height//2,width//2)) # add central gaussian 
                 itti_saliency = cv2.normalize(itti_saliency,None, 0, 255, cv2.NORM_MINMAX) if np.max(itti_saliency)>0 else itti_saliency * 0
@@ -274,7 +274,7 @@ def main(args:argparse.Namespace):
                 itti_saliency = np.where(itti_saliency > np.percentile(itti_saliency,args.selective_threshold),itti_saliency,0)
                 itti_saliency = cv2.cvtColor(np.uint8(itti_saliency),cv2.COLOR_GRAY2BGR)
 
-                motion_saliency = (norm_dynamic - np.min(norm_dynamic))/(np.max(norm_dynamic)-np.min(norm_dynamic)+1e-6)*255
+                motion_saliency = (norm_dynamic - np.min(norm_dynamic))/(np.max(norm_dynamic)-np.min(norm_dynamic)+1e-2)*255
                 motion_saliency = cv2.resize(motion_saliency,(width,height),interpolation=cv2.INTER_NEAREST)
                 #S_bar = interference_function(S_bar, (height//2,width//2)) # add central gaussian 
                 motion_saliency = cv2.normalize(motion_saliency,None, 0, 255, cv2.NORM_MINMAX) if np.max(motion_saliency)>0 else itti_saliency * 0

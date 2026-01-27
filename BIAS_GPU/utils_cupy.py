@@ -66,8 +66,8 @@ class CupyGaborFilter:
 class CupyImagePyramid:
     
     def __init__(self):
-        self.gaussian_kernel_1d = cp.array([1., 4., 6., 4., 1.], dtype=cp.float32) / 16.0 # 5
-        self.kernel_2d = get_kernel('gaussian_5x5')
+        self.gaussian_kernel_1d = cp.array([1., 4., 6., 4., 1.], dtype=cp.float16) / 16.0 # 5
+        self.kernel_2d = get_kernel('gaussian_5x5').astype(cp.float16)
 
     def gaussian_pyramid_cupy(self, image: cp.ndarray) -> cp.ndarray:
         """
@@ -76,13 +76,16 @@ class CupyImagePyramid:
         # Ensure input is 2D tensor (height, width)
         original_shape = image.shape
         assert 2<= len(original_shape) <=3
+        # assert image.dtype ==self.gaussian_kernel_1d.dtype== cp.float32
         
         # Use separable convolution: apply 1D Gaussian kernels along height and width separately
         # First apply along width direction (dim=0)
-        temp_result = convolve1d(image,self.gaussian_kernel_1d,axis = 0,mode='constant')
+        # print('img dtype=',image.dtype,'kernel dtype=', self.gaussian_kernel_1d.dtype)
+        # quit()
+        temp_result = convolve1d(image,self.gaussian_kernel_1d, axis = 0,mode='reflect')
         
         # Then apply along height direction (dim=1)
-        temp_result = convolve1d(temp_result,self.gaussian_kernel_1d,axis = 1,mode='constant')
+        temp_result = convolve1d(temp_result,self.gaussian_kernel_1d, axis = 1,mode='reflect')
         
         # Downsample: take every other pixel
         if len(original_shape) == 3:
@@ -142,123 +145,53 @@ class CupyImagePyramid:
 
 
 class CupyImageProcessing:
-    """image processing using module"""
-    
     def __init__(self):
         pass
 
     def align(self, img1, img2, debug=True):
-        """
-        Align two 2D CuPy arrays (H, W) to the same spatial size via bilinear interpolation.
-
-        Args:
-            img1, img2: cp.ndarray of shape (H, W)
-            debug: bool, enable shape assertions
-
-        Returns:
-            (img1_resized, img2_resized): both of shape (H_max, W_max)
-        """
-        if debug:
-            assert img1.ndim == 2 and img2.ndim == 2, \
-                f'Inputs must be 2D, got {img1.shape} and {img2.shape}'
-
-        # Early return if both are zero
-        if cp.max(img1) == 0 and cp.max(img2) == 0:
-            # Return in consistent order; choose larger or first
-            shape = img1.shape if img1.shape[0] >= img2.shape[0] else img2.shape
-            return cp.zeros(shape=shape), cp.zeros(shape=shape)
-
-        target_h = max(img1.shape[0], img2.shape[0])
-        target_w = max(img1.shape[1], img2.shape[1])
-        def resize_to_target(x, target_h, target_w):
-            if x.shape[0] == target_h and x.shape[1] == target_w:
-                return x
-            zoom_h = target_h / x.shape[0]
-            zoom_w = target_w / x.shape[1]
-            # Apply zoom only on 2D array
-            resized = zoom(x, (zoom_h, zoom_w), order=1, mode='nearest', prefilter=False)
-            return resized
-
-        img1_resized = resize_to_target(img1, target_h, target_w)
-        img2_resized = resize_to_target(img2, target_h, target_w)
-
-        return img1_resized, img2_resized
-    
-    def align3d(self, img1, img2, debug=True):
-        """
-        Align two 3D CuPy arrays (H, W, C) to the same spatial size via bilinear interpolation.
-
-        Args:
-            img1, img2: cp.ndarray of shape (H, W, C)
-            debug: bool, enable shape assertions
-
-        Returns:
-            (img1_resized, img2_resized): both of shape (H_max, W_max, C)
-        """
-        if debug:
-            assert img1.ndim == 3 and img2.ndim == 3, \
-                f'Inputs must be 3D, got {img1.shape} and {img2.shape}'
-
-        # Early return if both are zero
-        if cp.max(img1) == 0 and cp.max(img2) == 0:
-            # Return in consistent order; choose larger or first
-            shape = img1.shape if img1.shape[0] >= img2.shape[0] else img2.shape
-            return cp.zeros(shape=shape), cp.zeros(shape=shape)
-
-        target_h = max(img1.shape[0], img2.shape[0])
-        target_w = max(img1.shape[1], img2.shape[1])
-        target_c = max(img1.shape[2], img2.shape[2])
+        """优化后的 2D 对齐"""
+        if img1.shape == img2.shape:
+            return img1, img2
         
-        def resize_to_target(x, target_h, target_w, target_c):
-            # Resize spatial dimensions (H, W) using zoom
-            if x.shape[0] == target_h and x.shape[1] == target_w and x.shape[2] == target_c:
-                return x
+        target_h = max(img1.shape[0], img2.shape[0])
+        target_w = max(img1.shape[1], img2.shape[1])
+        
+        # 使用更快的 zoom 参数，并确保在 float16 下执行
+        def _res(img, th, tw):
+            if img.shape[0] == th and img.shape[1] == tw:
+                return img
+            # order=1 是双线性插值，prefilter=False 提速明显
+            return zoom(img.astype(cp.float16), (th/img.shape[0], tw/img.shape[1]), 
+                        order=1, mode='nearest', prefilter=False)
+
+        return _res(img1, target_h, target_w), _res(img2, target_h, target_w)
+
+    def align3d(self, img1, img2, debug=True):
+        """优化后的 3D 对齐"""
+        if img1.shape == img2.shape:
+            return img1, img2
             
-            zoom_h = target_h / x.shape[0]
-            zoom_w = target_w / x.shape[1]
-            zoom_c = target_c / x.shape[2]
-            
-            # Apply zoom to all three dimensions
-            resized = zoom(x, (zoom_h, zoom_w, zoom_c), order=1, mode='nearest', prefilter=False)
-            return resized
+        target_h = max(img1.shape[0], img2.shape[0])
+        target_w = max(img1.shape[1], img2.shape[1])
+        # 假设通道数 C (如 theta) 是一致的，不需要缩放通道维度
+        
+        def _res(img, th, tw):
+            if img.shape[0] == th and img.shape[1] == tw:
+                return img
+            # 只在 H, W 维度缩放，保持 C 维度不变 (zoom_factor=1)
+            return zoom(img.astype(cp.float16), (th/img.shape[0], tw/img.shape[1], 1), 
+                        order=1, mode='nearest', prefilter=False)
 
-        img1_resized = resize_to_target(img1, target_h, target_w, target_c)
-        img2_resized = resize_to_target(img2, target_h, target_w, target_c)
+        return _res(img1, target_h, target_w), _res(img2, target_h, target_w)
 
-        return img1_resized, img2_resized
+    def subtraction_torch(self, img1, img2, debug=True):
+        # 确保减法在 float16 下执行以节省显存
+        i1, i2 = self.align3d(img1, img2) if img1.ndim==3 else self.align(img1, img2)
+        return i1.astype(cp.float16) - i2.astype(cp.float16)
 
-    def subtraction_torch(self, img1: cp.ndarray, img2: cp.ndarray, ifshow: bool = False, debug = True) -> cp.ndarray:
-        """
-        subtraction two images
-        """
-        if len(img1.shape) == 2 and len(img2.shape) == 2:
-            img1_resized, img2_resized = self.align(img1, img2, debug=debug)
-            return img1_resized - img2_resized
-        elif len(img1.shape) == 3 and len(img2.shape) == 3:
-            img1_resized, img2_resized = self.align3d(img1, img2, debug=debug)
-            return img1_resized - img2_resized
-        else:
-            raise ValueError(f'Inputs must be 2D or 3D, got {img1.shape} and {img2.shape}')
-
-    def addition_torch(self, img1: cp.ndarray, img2: cp.ndarray, ifshow: bool = False, debug = True) -> cp.ndarray:
-        if len(img1.shape) == 2 and len(img2.shape) == 2:
-            img1_resized, img2_resized = self.align(img1, img2, debug=debug)
-            return img1_resized + img2_resized
-        elif len(img1.shape) == 3 and len(img2.shape) == 3:
-            img1_resized, img2_resized = self.align3d(img1, img2, debug=debug)
-            return img1_resized + img2_resized
-        else:
-            raise ValueError(f'Inputs must be 2D or 3D, got {img1.shape} and {img2.shape}')
-
-    def multiplication_torch(self, img1: cp.ndarray, img2: cp.ndarray, debug=True) -> cp.ndarray:
-        if len(img1.shape) == 2 and len(img2.shape) == 2:
-            img1_resized, img2_resized = self.align(img1, img2, debug=debug)
-            return img1_resized * img2_resized
-        elif len(img1.shape) == 3 and len(img2.shape) == 3:
-            img1_resized, img2_resized = self.align3d(img1, img2, debug=debug)
-            return img1_resized * img2_resized
-        else:
-            raise ValueError(f'Inputs must be 2D or 3D, got {img1.shape} and {img2.shape}')
+    def addition_torch(self, img1, img2, debug=True):
+        i1, i2 = self.align3d(img1, img2) if img1.ndim==3 else self.align(img1, img2)
+        return i1.astype(cp.float16) + i2.astype(cp.float16)
 
     def conv_function_torch(self, image: cp.ndarray, kernel: cp.ndarray) -> cp.ndarray:
         if len(image.shape) == 2 and len(kernel.shape) == 2:
@@ -272,7 +205,7 @@ class CupyImageProcessing:
             raise ValueError(f'Inputs must be 2D or 3D, got {image.shape} and {kernel.shape}')
 
 
-def cpnormalize_img(img: cp.ndarray, M: float = 1.0, tol: float = 1e-5) -> cp.ndarray:
+def cpnormalize_img(img: cp.ndarray, M: float = 1.0, tol: float = 1e-2) -> cp.ndarray:
     """
     Normalize image and scale by (M - mean_of_local_maxima)^2.
     
@@ -288,10 +221,10 @@ def cpnormalize_img(img: cp.ndarray, M: float = 1.0, tol: float = 1e-5) -> cp.nd
     
     # Handle constant or zero image
     if img_max <= img_min:
-        return cp.zeros_like(img, dtype=cp.float32)
+        return cp.zeros_like(img, dtype=cp.float16)
     
-    normalized = (img - img_min) / (img_max - img_min+1e-3) * M
-    normalized = normalized.astype(cp.float32)
+    normalized = (img - img_min) / (img_max - img_min+1e-2) * M
+    normalized = normalized.astype(cp.float16)
     
     w, h = img.shape
     size = (max(w // 10, 3), max(h // 10, 3))  # Integer window size
@@ -310,61 +243,51 @@ def cpnormalize_img(img: cp.ndarray, M: float = 1.0, tol: float = 1e-5) -> cp.nd
     
     return result
 
-def cpnormalize_img3d_dict(img_dict: dict[tuple[int,int],cp.ndarray], M: float = 1.0, tol: float = 1e-5, axis = (0,1)) -> cp.ndarray:
+def cpnormalize_img3d_dict(img_dict: dict, M: float = 1.0, tol: float = 1e-2):
     """
-    Normalize image and scale by (M - mean_of_local_maxima)^2.
-    
-    Args:
-        img_dict: dict of 3D CuPy array (H, W, C)
-        M: target max value after normalization
-    
-    Returns:
-        None, edit the dict in place
+    修正后的字典归一化，支持 float16
     """
-    for key, img in img_dict.items():
-        img_min = img.min(axis=axis)
-        img_max = img.max(axis=axis)
-        # print(img_min.shape, img_max.shape)
-        
-        # Handle constant or zero image
-        # img_dict[key][:,:,img_max<img_min+tol] = 0
-        
-        normalized_ = (img - img_min) / (img_max - img_min+1e-5) * M
-        normalized_ = normalized_.astype(cp.float32)
+    for key in img_dict:
+        if img_dict[key] is not None:
+            img_dict[key] = cpnormalize_img3d(img_dict[key], M, tol)
+
+def cpnormalize_img3d(img: cp.ndarray, M: float = 1.0, tol: float = 1e-2, axis=(0,1)) -> cp.ndarray:
+    """
+    针对 float16 优化的 Itti 归一化算法
+    """
+    # 1. 转为 float16
+    img = img.astype(cp.float16)
+    
+    # 2. 基础归一化到 [0, M]
+    img_min = img.min(axis=axis, keepdims=True)
+    img_max = img.max(axis=axis, keepdims=True)
+    
+    
+    diff = img_max - img_min
+    if diff[0,0,0] <= tol:
+        return cp.zeros_like(img, dtype=cp.float16)
+    normalized = cp.where(diff > tol, (img - img_min) / (diff + 1e-2) * M, cp.zeros_like(img))
     
     w, h = img.shape[0], img.shape[1]
-    size = (max(w // 10, 3), max(h // 10, 3), 1)  # Integer window size
+    # 局部窗口通常取图像宽高的 1/10
+    sw, sh = max(w // 10, 3), max(h // 10, 3)
     
-    max_filtered = maximum_filter(normalized_, size=size)
-    maxima_mask = normalized_ >= max_filtered - tol
+    # 这里的 maximum_filter 是计算瓶颈，size=(sw, sh, 1) 保证通道独立
+    max_filtered = maximum_filter(normalized, size=(sw, sh, 1))
     
-    mnum = maxima_mask.sum()
-    if mnum == 0:
-        mbar = 0.0
-    else:
-        mbar = float(cp.sum(normalized_ * maxima_mask)) / float(mnum)
-
-    scale_factor = (M - mbar) ** 2
-    result = normalized_ * scale_factor
-    img_dict[key] = result
-
-class TorchVideoProcessor:
-    """Torch based Video data processor"""
+    # 找到局部最大值点
+    maxima_mask = (normalized >= max_filtered - tol) & (normalized > 0)
     
-    def __init__(self):
-        pass
-
-    def read_video(self, path: str) -> Tuple[cv2.VideoCapture, Tuple[int, int]]:
-        cap = cv2.VideoCapture(path)
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        final_shape = (width, height)
-        return cap, final_shape
-
-    def pre_processing_cupy(self, image: np.ndarray, args: argparse.Namespace) -> cp.ndarray:
-        gray_image = cv2.cvtColor(cv2.resize(image, args.default_size), cv2.COLOR_BGR2GRAY)
-        tensor_image = cp.asarray(gray_image)
-        return tensor_image
+    # 计算所有局部最大值的平均值 m_bar
+    # 对每个通道独立计算
+    sum_maxima = cp.sum(normalized * maxima_mask, axis=axis)
+    count_maxima = cp.sum(maxima_mask, axis=axis)
     
+    # 避免 count 为 0
+    m_bar = cp.where(count_maxima > 0, sum_maxima / (count_maxima + 1e-2), 0)
+    
+    scale_factor = (M - m_bar) ** 2
+    return (normalized * scale_factor).astype(cp.float16)
+
 
         

@@ -3,7 +3,7 @@ import cupy as cp
 import argparse
 import cv2
 from cupyx.scipy.ndimage import zoom, convolve1d
-from utils_cupy import cpnormalize_img,cpnormalize_img3d_dict, CupyImageProcessing, CupyImagePyramid
+from utils_cupy import cpnormalize_img, cpnormalize_img3d_dict, CupyImageProcessing, CupyImagePyramid
 
 
 def resize2normal(image):
@@ -20,54 +20,69 @@ def seperate_RGB_chanells(image):
    return image[:,:,2], image[:,:,1], image[:,:,0]
 
 class CupyPreProcessor:
-    def __init__(self, args, shape_hw):  # shape_hw = (H, W)
-    
-        gamma = args.gamma_correction
-        inv_gamma = 1.0 / gamma
-        self.table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)], dtype=np.uint8)
-        
+    def __init__(self, args, shape_hw):
+        self.inv_gamma = 1.0 / args.gamma_correction
         H, W = shape_hw
-        # Gaussian kernels: (H, 1) and (W, 1)
-        k_h = cv2.getGaussianKernel(H, H / 2.0)
-        k_w = cv2.getGaussianKernel(W, W / 2.0)
-        k_h /= k_h.max()
-        k_w /= k_w.max()
         
-        # mask: (H, W)
-        self.mask = (k_h @ k_w.T).astype(np.float32)  # outer product
-        self.neg_mask = 1.0 - self.mask
+        # 预计算 Mask 并直接存入 GPU (建议用 float32 保证 Gamma 精度，后续再转 float16)
+        k_h = cp.asarray(cv2.getGaussianKernel(H, H / 2.0))
+        k_w = cp.asarray(cv2.getGaussianKernel(W, W / 2.0))
+        self.mask_gpu = (k_h @ k_w.T).astype(cp.float16)
+        self.mask_gpu = self.mask_gpu / cp.max(self.mask_gpu)
+        self.neg_mask_gpu = 1.0 - self.mask_gpu
 
-        # Transfer to GPU once
-        self.mask_gpu = cp.asarray(self.mask)
-        self.neg_mask_gpu = cp.asarray(self.neg_mask)
-
-
-    def process(self, image):
-        """
-        Args:
-            image: np.ndarray of shape (H, W, C), uint8, on CPU
+    def process(self, image_cpu):
+        # 1. 将输入拷贝到 GPU
+        img_gpu = cp.asarray(image_cpu, dtype=cp.float16)
+        img_norm = img_gpu / 255.0
+        img_mean = cp.mean(img_norm)
         
-        Returns:
-            cp.ndarray of shape (H, W, C), float32, on GPU
-        """
-        # Gamma correction on CPU (OpenCV)
-        gamma_corrected = cv2.LUT(image, self.table)  # (H, W, C), uint8
-        # Move to GPU and convert to float32
-        img_gpu = cp.asarray(gamma_corrected, dtype=cp.float32)
-        # Compute mean on GPU
-        img_mean = cp.mean(img_gpu)
-        # Apply mask: (H, W, 1) * (H, W, C) → (H, W, C)
-        mask_expanded = self.mask_gpu[..., cp.newaxis]      # (H, W, 1)
-        neg_mask_expanded = self.neg_mask_gpu[..., cp.newaxis]  # (H, W, 1)
-        gaussian_img = mask_expanded * img_gpu + neg_mask_expanded * img_mean # (H, W, 3)
-        return gaussian_img
-    
-    def reset(self):
-        # build an empty ICpyrimid
-        pass
+        return self._fused_process(
+            img_norm, 
+            self.mask_gpu[..., cp.newaxis], 
+            self.neg_mask_gpu[..., cp.newaxis], 
+            self.inv_gamma, 
+            img_mean
+        ).astype(cp.float16)
+
+    @cp.fuse()
+    def _fused_process(img_norm, mask, neg_mask, inv_gamma, m_val):
+        corrected = cp.power(img_norm, inv_gamma)
+        return (mask * corrected + neg_mask * m_val) * 255.0
 
 
 class ICpyrimid:
+    _fast_build_kernel = cp.ElementwiseKernel(
+        'T R, T G, T B, T max_val', # 输入
+        'raw T out',                # 输出
+        '''
+        // 1. 使用 'i' 代替 '_ind' 获取线性索引
+        long long base = i * 6;
+
+        T s_val = (R + G + B) * (T)0.5;
+        T i_val = (T)0.299 * R + (T)0.587 * G + (T)0.114 * B;
+
+        // 2. 计算各个分量，预先算好
+        T v1 = R * (T)1.5 - s_val;
+        T v2 = B * (T)1.5 - s_val;
+        T v3 = max_val - i_val;
+        T v4 = G * (T)1.5 - s_val;
+        
+        T diff = G - R;
+        T abs_diff = (diff < (T)0.0) ? (T)(-diff) : diff;
+        T v5 = (G + R) * (T)0.5 - abs_diff * (T)0.5 - B;
+
+        // 3. 写入显存，使用三元运算符代替 max 以兼容 float16
+        out[base + 0] = i_val;
+        out[base + 1] = (v1 > (T)0.0) ? v1 : (T)0.0;
+        out[base + 2] = (v2 > (T)0.0) ? v2 : (T)0.0;
+        out[base + 3] = (v3 > (T)0.0) ? v3 : (T)0.0;
+        out[base + 4] = (v4 > (T)0.0) ? v4 : (T)0.0;
+        out[base + 5] = (v5 > (T)0.0) ? v5 : (T)0.0;
+        ''',
+        'fast_build_6_channels'
+    )
+
     def __init__(self, args):
         self.args = args
         self.c_set = sorted(self.args.center)
@@ -77,50 +92,44 @@ class ICpyrimid:
         self.total_height = args.total_height
         self.build_pyramid = CupyImagePyramid()
         self.img_process = CupyImageProcessing()
-        self.transformI = cp.asarray([0.299, 0.587, 0.114])
+        self.transformI = cp.asarray([0.299, 0.587, 0.114]).astype(cp.float16)
         self.shapes = [(240, 320), (120, 160), (60, 80), (30, 40), (15, 20), (8, 10), (4, 5), (2, 3)]
-        # Pyr shapes should be:
-        # (240, 320)
-        # (120, 160)
-        # (60, 80)
-        # (30, 40)
-        # (15, 20)
-        # (8, 10)
-        # (4, 5)
-        # (2, 3)
-        self.ID_idx = [0,3]
-        self.color_idx = [1,2,4,5]
         self.final_channel_cnt = 6
         self.reset()
 
     def reset(self):
-        self.ICs = [cp.zeros(shape + (self.final_channel_cnt,), dtype=cp.float32) for shape in self.shapes]
-        self.scaling_dict = {(c,s):cp.zeros_like(self.ICs[0]) for (c,s) in self.cs_lst}
+        self.ICs = [cp.zeros(shape + (self.final_channel_cnt,), dtype=cp.float16) for shape in self.shapes]
+        self.scaling_dict = {(c,s):cp.zeros_like(self.ICs[c], dtype=cp.float16) for (c,s) in self.cs_lst}
     
+
     def build(self, gaussian_img):
+        self.reset()
+        # 1. 强制转换输入为 float16
+        img = gaussian_img.astype(cp.float16, copy=False)
+        R, G, B = img[..., 2], img[..., 1], img[..., 0]
         
-        self.ICs = [cp.zeros(shape + (self.final_channel_cnt,), dtype=cp.float32) for shape in self.shapes]
-        # we arrange the 6 channels as I, R, B, D, G, Y
-        sum_ = cp.sum(gaussian_img, axis=-1)/2
-        # print(sum_.shape)
-        self.ICs[0][..., 0] = cp.tensordot(gaussian_img,self.transformI,axes=([-1],[0]))
-        self.ICs[0][..., 1] = gaussian_img[...,2]*1.5 - sum_
-        self.ICs[0][..., 2] = gaussian_img[...,0]*1.5 - sum_
-        self.ICs[0][..., 3] = cp.max(gaussian_img) - self.ICs[0][..., 0]
-        self.ICs[0][..., 4] = gaussian_img[...,1]*1.5 - sum_
-        self.ICs[0][..., 5] = (gaussian_img[...,1] + gaussian_img[...,2]) / 2 - cp.abs(gaussian_img[...,1] - gaussian_img[...,2]) / 2 - gaussian_img[...,1]
-        self.ICs[0] = cp.maximum(self.ICs[0],0)
-        # print(Is.shape) # (240, 320)
+        # 2. 计算全局最大值并确保也是 float16 标量
+        max_val = cp.max(img).astype(cp.float16)
+        
+        # 3. 确保输出容器是连续的且类型正确
+        if self.ICs[0].dtype != cp.float16:
+            self.ICs[0] = self.ICs[0].astype(cp.float16)
+        
+        # 显存连续性检查（重要）
+        if not self.ICs[0].flags.c_contiguous:
+            self.ICs[0] = cp.ascontiguousarray(self.ICs[0])
+
+        # 4. 调用内核
+        self._fast_build_kernel(R, G, B, max_val, self.ICs[0])
+
+        # 5. 构建后续金字塔
         self.build_pyramid.eight_pyramid_built_3d(self.ICs)
-        # for i in range(8):
-        #     print(self.ICs[i].shape)
-        #     print(cp.sum(self.ICs[i]))
     
     def scaling(self, c,s):
         diff = self.ICs[c][:,:,:3] - self.ICs[c][:,:,3:]
         diff = self.img_process.subtraction_torch(diff, self.ICs[s][:,:,:3] - self.ICs[s][:,:,3:])
         diff -= cp.mean(diff, axis=(0,1), keepdims=True)
-        self.scaling_dict[(c,s)] = cp.concatenate((cp.maximum(diff, 0), cp.maximum(-diff, 0)), axis=2)
+        self.scaling_dict[(c,s)] = cp.concatenate((cp.maximum(diff, 0), cp.maximum(-diff, 0)), axis=2).astype(cp.float16)
         
 
     def diff_process(self):
@@ -129,11 +138,11 @@ class ICpyrimid:
         cpnormalize_img3d_dict(self.scaling_dict)
     
     def get_conspicuous_map(self):
-        I_bar = cp.zeros((1,1))#self.ICs[0][..., 0].shape, dtype=cp.float32)  # Initialize with proper shape
-        C_bar = cp.zeros((1,1))#self.ICs[0][..., 0].shape, dtype=cp.float32)  # Initialize with proper shape
+        IC_bar = cp.zeros((1,1,3))
         for (c,s) in self.cs_lst:
-            I_bar = self.img_process.addition_torch(I_bar, cp.sum(self.scaling_dict[(c,s)][:,:,self.ID_idx], axis=-1))
-            C_bar = self.img_process.addition_torch(C_bar, cp.sum(self.scaling_dict[(c,s)][:,:,self.color_idx], axis=-1))
+            IC_bar = self.img_process.addition_torch(IC_bar, self.scaling_dict[(c,s)][:,:,:3] + self.scaling_dict[(c,s)][:,:,3:])
+        I_bar = IC_bar[..., 0]
+        C_bar = cp.sum(IC_bar[..., 1:], axis=-1)
         return I_bar, C_bar
 
 
@@ -160,7 +169,7 @@ if __name__ == '__main__':
     args = parse_args()
     
     # Load the test image from the provided path
-    test_image_path = '/mnt/e/Li Lab/CVPR_rebuttal_/cuda-conv/data/checker.png'
+    test_image_path = '/mnt/e/Li Lab/CVPR_rebuttal_/cuda-conv/data/lena.png'
     try:
         image = cv2.imread(test_image_path)
         if image is None:

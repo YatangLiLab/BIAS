@@ -5,7 +5,7 @@ from osaliency_cupy import GaborFilter, Orientation_Saliency, cpnormalize_img
 def test_gabor_filter():
     print("=== Test 1: GaborFilter single image ===")
     g = GaborFilter(frequency=0.2, theta=np.pi/4, ksize=5)
-    img = cp.random.rand(64, 64).astype(cp.float32)
+    img = cp.random.rand(64, 64).astype(cp.float16)
     resp = g(img)
     assert resp.shape == (64, 64)
     assert not cp.any(cp.isnan(resp))
@@ -15,7 +15,7 @@ def test_gabor_filter():
 def test_cpnormalize_img():
     print("=== Test 2: cpnormalize_img on Gabor response ===")
     g = GaborFilter(frequency=0.2, theta=0.0, ksize=5)
-    img = cp.ones((32, 32), dtype=cp.float32)  # constant image
+    img = cp.ones((32, 32), dtype=cp.float16)  # constant image
     resp = g(img)
     normed = cpnormalize_img(resp, M=1.0)
     assert normed.shape == resp.shape
@@ -36,11 +36,11 @@ def test_orientation_saliency_full_pipeline():
 
     # Create dummy image pyramid: list of (H, W) CuPy arrays
     Is = []
-    base_h, base_w = 128, 128
+    base_h, base_w = 480, 640
     for i in range(args.total_height):
         h = base_h // (2 ** (i // 2))  # simulate coarse-to-fine
         w = base_w // (2 ** (i // 2))
-        Is.append(cp.random.rand(h, w).astype(cp.float32))
+        Is.append(cp.random.rand(h, w, 1).astype(cp.float16))
 
     # Run pipeline
     model.build_pyramid(Is)

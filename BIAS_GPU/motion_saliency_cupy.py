@@ -5,8 +5,10 @@ import cv2
 from cupyx.scipy.ndimage import convolve
 from cudaconv import convolve as convolve2d
 from cudaconv.presets import get_kernel
-from utils_cupy import cpnormalize_img,cpnormalize_img3d_dict, CupyImageProcessing, CupyImagePyramid
+from utils_cupy import cpnormalize_img,cpnormalize_img3d_dict, CupyImageProcessing, CupyImagePyramid, cpnormalize_img3d
 from isaliency_cupy import ICpyrimid, resize2normal
+
+
 
 def simple_minus_separation(mat_lst1,mat_lst2):
     """
@@ -20,6 +22,7 @@ def simple_minus_separation(mat_lst1,mat_lst2):
         pos_lst.append(cp.maximum(diff, 0))
         neg_lst.append(cp.maximum(-diff, 0))
     return pos_lst, neg_lst
+
 
 def zero_edge(image):
     """
@@ -41,16 +44,15 @@ class DynamicSaliency:
         self.shapes = [(240, 320), (120, 160), (60, 80), (30, 40), (15, 20), (8, 10), (4, 5), (2, 3)]
         self.ImageProcessing = CupyImageProcessing()
         # 初始化3x3高斯核
-        self.gaussian_kernel_3x3 = cp.array([[1,2,1],[2,4,2],[1,2,1]], dtype=cp.float32) / 16.0
+        self.gaussian_kernel_3x3 = cp.array([[1,2,1],[2,4,2],[1,2,1]], dtype = cp.float16) / 16.0
     
     def reset(self):
-        self.motion_pyramid = [cp.zeros((*self.shapes[level],4)) for level in range(1,5)]
+        self.motion_pyramid = [cp.zeros((*self.shapes[level],4)) for level in range(self.args.total_height)]
         self.motion_dict = {(c,s):cp.zeros((*self.shapes[c],4)) for (c,s) in self.cs_lst}
 
-    
     def non_linear(self, x):
         M = cp.max(x)
-        M2 = M * M + 1e-7
+        M2 = M * M + 1e-2
         return 2 * x / cp.sqrt(M2 + 4 * x * x)
 
     def sum_of_image_lst(self, mat_lst):
@@ -68,16 +70,18 @@ class DynamicSaliency:
         diff -= cp.mean(diff, axis=(0,1), keepdims=True)
         self.motion_dict[(c,s)] = cp.concatenate((cp.maximum(diff, 0), cp.maximum(-diff, 0)), axis=2)
         
-
     def diff_process(self, pyramid):
         for (c,s) in self.cs_lst:
             self.scaling(pyramid, c,s)
         cpnormalize_img3d_dict(self.motion_dict)
     
     def generate_motion_saliency_map(self):
-        M_bar = cp.zeros(1,1)
+        M_bar = None
         for mat in self.motion_dict.values():
-            M_bar = self.ImageProcessing.addition_torch(M_bar, mat)
+            if M_bar is None:
+                M_bar = mat
+            else:
+                M_bar = self.ImageProcessing.addition_torch(M_bar, mat)
         return M_bar
 
     def four_dir_sim(self,Is0,Is1)->cp.array:
@@ -85,13 +89,13 @@ class DynamicSaliency:
         use Hassenstein-Reichardt-like model to detect motion information.
         """
         self.reset()
-        for spatial_index in (1,2,3,4):
+        for spatial_index in range(self.args.total_height):
             if spatial_index not in self.cal_lst:
                 continue
-            current_frame = cp.asarray(Is0[spatial_index][:, :, 0], dtype=cp.float32)
-            former_frame = cp.asarray(Is1[spatial_index][:, :, 0], dtype=cp.float32)
+            current_frame = cp.asarray(Is0[spatial_index][:, :, 0], dtype=cp.float16)
+            former_frame = cp.asarray(Is1[spatial_index][:, :, 0], dtype=cp.float16)
 
-            max_form = cp.maximum(current_frame,former_frame)+1e-5
+            max_form = cp.maximum(current_frame,former_frame)+1e-2
             # tmp = cp.abs(current_frame - former_frame)
             shape = current_frame.shape
             edge = 2
@@ -106,20 +110,125 @@ class DynamicSaliency:
                 r = cp.exp(-1/50 * padd_r_pair[self.directions[dir_pair_index][0]+1 : self.directions[dir_pair_index][0]+1+shape[0],\
                                                                                           self.directions[dir_pair_index][1]+1 : self.directions[dir_pair_index][1]+1+shape[1]])# *tmp
                 diff = l-r
-                l = cp.maximum(diff, 0)
-                r = cp.maximum(-diff, 0)
-                self.motion_pyramid[spatial_index-1][:,:,dir_pair_index] = l
-                self.motion_pyramid[spatial_index-1][:,:,self.half + dir_pair_index] = r
-            # shape_value = cp.shape(motion_dict['ls'][-1])[0] * cp.shape(motion_dict['ls'][-1])[1] 
-        # tus, tds = simple_minus_separation(self.motion_pyramid[spatial_index-1][:,:,self.half],self.motion_pyramid[spatial_index-1][:,:,self.half+1])
-        # tls, trs = simple_minus_separation(self.motion_pyramid[spatial_index-1][:,:,0],self.motion_pyramid[spatial_index-1][:,:,1])
-        motion_pyramid = [cp.concatenate((simple_minus_separation(pyramid[:,:,:self.half],pyramid[:,:,self.half:])),axis=2) for pyramid in self.motion_pyramid]
-        # each idx stands for a tensor [H,W,C], C=4, C=0,1,2,3 stands for [down, right, up, left]
-        sum_pyramid = self.sum_of_image_lst(motion_pyramid)
-        result_4ch = convolve(sum_pyramid, self.gaussian_kernel_3x3[:,:,None], mode='constant') # [H,W,C]
+                self.motion_pyramid[spatial_index][:,:,dir_pair_index] = cp.maximum(diff, 0)
+                self.motion_pyramid[spatial_index][:,:,self.half + dir_pair_index] = cp.maximum(-diff, 0)
 
-        self.scaling(result_4ch)
-        return self.generate_motion_saliency_map() # return [H,W,1] as motion saliency map.
+        processing = lambda x,y: self.ImageProcessing.subtraction_torch(x,y)
+        split_cat = lambda x: cp.concatenate((cp.maximum(x,0), cp.maximum(-x,0)),axis=2)
+        # print([pyramid.shape for pyramid in self.motion_pyramid])
+        motion_pyramid = [(split_cat(processing(pyramid[:,:,:self.half],pyramid[:,:,self.half:]))) for pyramid in self.motion_pyramid]
+        # each idx stands for a tensor [H,W,C], C=4, C=0,1,2,3 stands for [down, right, up, left]
+        
+        # 计算中心-周围差异
+        self.diff_process(motion_pyramid)
+        
+        # 生成运动显著性图
+        saliency_map = self.generate_motion_saliency_map()
+        
+        # 应用高斯卷积平滑
+        saliency_map = convolve(saliency_map, self.gaussian_kernel_3x3[:,:,None], mode='constant') # [H,W,4]
+        
+        return saliency_map # return [H,W,4] as motion saliency map.
 
 if __name__ == '__main__':
-    ...
+    # 解析命令行参数
+    import matplotlib.pyplot as plt
+    from isaliency_cupy import CupyPreProcessor
+    def parse_args():
+        parse = argparse.ArgumentParser(description='Essential parameters for gabor processing') 
+        parse.add_argument('--image_path', default="E:\\your_path\\RealtimeSaliency\\test_image\\circle.jpg", type=str, help='path of sample image') 
+        parse.add_argument('--total_height',default=8,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid')
+        parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid')
+        parse.add_argument('--gabor_kernel_size',default=33,type=int,help='the minimal value of gabor kernel size. when meet some constrains, we would double some params.')
+        parse.add_argument('--num_of_thetas',default=4,type=int,help='different gabor filter orientations.')
+        parse.add_argument('--mini_sigma',default=0.5,type=float,help='sigma of gabor kernel, if the image is too small hori2then double it.')
+        parse.add_argument('--gabor_lambda',default=np.pi/np.sqrt(2*np.log(1/0.5)),type=float,help = 'lambda for gabor kernels')
+        parse.add_argument('--gabor_gamma',default=1,type=float,help = 'gamma value for gabor filter.')
+        parse.add_argument('--default_size',default=(640,480),type=tuple,help = 'default size of image')
+        parse.add_argument('--center',default = (1,),type=tuple,help = "center params. Itti default params are (2, 3, 4)")
+        parse.add_argument('--surrounding',default = (4,),type=tuple,help = "surrounding params. Itti default params are (3, 4)")
+        parse.add_argument('--gamma_correction', type=float, default=2.2, help='Gamma correction value')
+        args = parse.parse_args() 
+        return args
+    
+    args = parse_args()
+    
+    # 初始化DynamicSaliency对象
+    preprossor = CupyPreProcessor(args,(240, 320))
+    motion_saliency = DynamicSaliency(args)
+    
+    # 视频路径
+    video_path = "/mnt/e/Li Lab/CVPR_rebuttal_/BIAS-a-Biologically-Inspired-Algorithm-for-video-Saliency-detection/example_data/demo.AVI"
+    
+    # 打开视频
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video {video_path}")
+        exit()
+    
+    # 读取第一帧
+    ret, prev_frame = cap.read()
+    if not ret:
+        print("Error: Could not read first frame")
+        cap.release()
+        exit()
+    
+    ic_pyramid = ICpyrimid(args)
+    _prev_frame = cv2.resize(prev_frame, (320, 240))
+    _prev_frame = preprossor.process(_prev_frame)
+    ic_pyramid.build(cp.asarray(_prev_frame))
+    Is1 = ic_pyramid.ICs
+
+    frame_count = 0
+    while True:
+        # 读取当前帧
+        ret, curr_frame = cap.read()
+        if not ret:
+            break
+                
+        # 生成图像金字塔
+        _curr_frame = cv2.resize(curr_frame, (320, 240))
+        curr_frame_processed = preprossor.process(_curr_frame)
+        ic_pyramid.build(cp.asarray(curr_frame_processed))
+        Is0 = ic_pyramid.ICs
+        
+        
+        # 计算运动显著性
+        saliency_map = motion_saliency.four_dir_sim(Is0, Is1)
+        
+        saliency_map = cp.sum(cpnormalize_img3d(saliency_map),axis=2,keepdims=False)
+        
+        # 转换回CPU并处理
+        saliency_map_cpu = cp.asnumpy(saliency_map)
+        saliency_map_cpu = cv2.normalize(saliency_map_cpu, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        
+        # 调整大小以匹配原始帧
+        saliency_map_resized = cv2.resize(saliency_map_cpu, (curr_frame.shape[1], curr_frame.shape[0]))
+        # 转换为彩色图以便叠加
+        saliency_colored = cv2.applyColorMap(saliency_map_resized, cv2.COLORMAP_JET)
+        
+        # 叠加显著性图到原始帧
+        overlay = cv2.addWeighted(curr_frame, 0.7, saliency_colored, 0.3, 0)
+        
+        # 显示结果
+        cv2.imshow('Original Frame', curr_frame)
+        cv2.imshow('Motion Saliency Map', saliency_map_resized)
+        cv2.imshow('Overlay', overlay)
+        
+        # 保存每10帧的结果
+        # if frame_count % 10 == 0:
+        #     cv2.imwrite(f"motion_saliency_frame_{frame_count}.jpg", saliency_map_resized)
+        #     cv2.imwrite(f"overlay_frame_{frame_count}.jpg", overlay)
+        
+        Is1 = Is0
+        frame_count += 1
+        
+        # 按ESC键退出
+        if cv2.waitKey(10) & 0xFF == 27:
+            break
+    
+    # 释放资源
+    cap.release()
+    cv2.destroyAllWindows()
+    
+    print(f"Test completed. Processed {frame_count} frames.")
