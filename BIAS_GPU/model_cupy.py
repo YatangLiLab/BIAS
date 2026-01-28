@@ -46,10 +46,10 @@ class BIAS():
         # 对显著性图进行归一化
         return cpnormalize_img(saliency_map)
 
-    def forward(self, current_frame, previous_ICs=None):
-        _current_frame = cv2.resize(current_frame, (320, 240))
+    def forward(self, processed_img, previous_ICs=None):
+        # _current_frame = cv2.resize(current_frame, (320, 240))
         # 预处理图像
-        processed_img = self.preprocessor.process(_current_frame)
+        # processed_img = self.preprocessor.process(_current_frame)
         
         # 计算静态显著性
         static_saliency, current_ICs = self.image_saliency(processed_img)
@@ -74,9 +74,9 @@ def parse_args():
     parse.add_argument('--mini_sigma',default=0.5,type=float,help='sigma of gabor kernel, if the image is too small hori2then double it.')
     parse.add_argument('--gabor_lambda',default=np.pi/np.sqrt(2*np.log(1/0.5)),type=float,help = 'lambda for gabor kernels')
     parse.add_argument('--gabor_gamma',default=1,type=float,help = 'gamma value for gabor filter.')
-    parse.add_argument('--default_size',default=(640,480),type=tuple,help = 'default size of image')
-    parse.add_argument('--center',default = (1,2),type=tuple,help = "center params. Itti default params are (2, 3, 4)")
-    parse.add_argument('--surrounding',default = (3,4),type=tuple,help = "surrounding params. Itti default params are (3, 4)")
+    parse.add_argument('--default_size',default=(320,240),type=tuple,help = 'default size of image')
+    parse.add_argument('--center',default = (1,),type=tuple,help = "center params. Itti default params are (2, 3, 4)")
+    parse.add_argument('--surrounding',default = (4,),type=tuple,help = "surrounding params. Itti default params are (3, 4)")
     parse.add_argument('--gamma_correction', type=float, default=2.2, help='Gamma correction value')
     args = parse.parse_args() 
     return args

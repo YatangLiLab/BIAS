@@ -159,7 +159,7 @@ if __name__ == '__main__':
         parse.add_argument('--mini_sigma',default=0.5,type=float,help='sigma of gabor kernel, if the image is too small hori2then double it.')
         parse.add_argument('--gabor_lambda',default=np.pi/np.sqrt(2*np.log(1/0.5)),type=float,help = 'lambda for gabor kernels')
         parse.add_argument('--gabor_gamma',default=1,type=float,help = 'gamma value for gabor filter.')
-        parse.add_argument('--default_size',default=(640,480),type=tuple,help = 'default size of image')
+        parse.add_argument('--default_size',default=(320,240),type=tuple,help = 'default size of image')
         parse.add_argument('--center',default = (1,2),type=tuple,help = "center params. Itti default params are (2, 3, 4)")
         parse.add_argument('--surrounding',default = (3,4),type=tuple,help = "surrounding params. Itti default params are (3, 4)")
         parse.add_argument('--gamma_correction', type=float, default=2.2, help='Gamma correction value')

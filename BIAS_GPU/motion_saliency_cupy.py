@@ -44,7 +44,7 @@ class DynamicSaliency:
         self.shapes = [(240, 320), (120, 160), (60, 80), (30, 40), (15, 20), (8, 10), (4, 5), (2, 3)]
         self.ImageProcessing = CupyImageProcessing()
         # 初始化3x3高斯核
-        self.gaussian_kernel_3x3 = cp.array([[1,2,1],[2,4,2],[1,2,1]], dtype = cp.float16) / 16.0
+        self.gaussian_kernel_3x3 = cp.array([[1,2,1],[2,4,2],[1,2,1]], dtype = cp.float32) / 16.0
     
     def reset(self):
         self.motion_pyramid = [cp.zeros((*self.shapes[level],4)) for level in range(self.args.total_height)]
@@ -125,8 +125,10 @@ class DynamicSaliency:
         # 生成运动显著性图
         saliency_map = self.generate_motion_saliency_map()
         
-        # 应用高斯卷积平滑
-        saliency_map = convolve(saliency_map, self.gaussian_kernel_3x3[:,:,None], mode='constant') # [H,W,4]
+        # 确保数据类型一致后再进行卷积
+        saliency_map = saliency_map.astype(cp.float32)
+        gaussian_kernel = self.gaussian_kernel_3x3.astype(cp.float32)[:,:,None]
+        saliency_map = convolve(saliency_map, gaussian_kernel, mode='constant') # [H,W,4]
         
         return saliency_map # return [H,W,4] as motion saliency map.
 
@@ -144,7 +146,7 @@ if __name__ == '__main__':
         parse.add_argument('--mini_sigma',default=0.5,type=float,help='sigma of gabor kernel, if the image is too small hori2then double it.')
         parse.add_argument('--gabor_lambda',default=np.pi/np.sqrt(2*np.log(1/0.5)),type=float,help = 'lambda for gabor kernels')
         parse.add_argument('--gabor_gamma',default=1,type=float,help = 'gamma value for gabor filter.')
-        parse.add_argument('--default_size',default=(640,480),type=tuple,help = 'default size of image')
+        parse.add_argument('--default_size',default=(320,240),type=tuple,help = 'default size of image')
         parse.add_argument('--center',default = (1,),type=tuple,help = "center params. Itti default params are (2, 3, 4)")
         parse.add_argument('--surrounding',default = (4,),type=tuple,help = "surrounding params. Itti default params are (3, 4)")
         parse.add_argument('--gamma_correction', type=float, default=2.2, help='Gamma correction value')

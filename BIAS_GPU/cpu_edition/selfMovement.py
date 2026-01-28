@@ -4,8 +4,12 @@ from matplotlib.colors import Normalize
 import numpy as np
 from tqdm import trange
 from utils import *
-from image_saliency import Is_scale
+from newStaticSaliency import Is_scale
 import time
+
+class Camera:
+    def __init__(self, video_path):
+        self.foo = moo
 
 def simple_minus_separation(mat_lst1,mat_lst2):
     """

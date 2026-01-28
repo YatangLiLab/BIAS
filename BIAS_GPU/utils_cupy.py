@@ -66,7 +66,7 @@ class CupyGaborFilter:
 class CupyImagePyramid:
     
     def __init__(self):
-        self.gaussian_kernel_1d = cp.array([1., 4., 6., 4., 1.], dtype=cp.float16) / 16.0 # 5
+        self.gaussian_kernel_1d = cp.array([1./ 16.0, 4./ 16.0, 6./ 16.0, 4./ 16.0, 1./ 16.0], dtype=cp.float16)  # 5
         self.kernel_2d = get_kernel('gaussian_5x5').astype(cp.float16)
 
     def gaussian_pyramid_cupy(self, image: cp.ndarray) -> cp.ndarray:

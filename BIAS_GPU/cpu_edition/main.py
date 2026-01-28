@@ -16,8 +16,8 @@ def parse_args():
     """
     parse = argparse.ArgumentParser(description='essential parameters') 
     # 
-    parse.add_argument('--video_path', default="", type=str, help='path of sample video') 
-    parse.add_argument('--generate_name',default = "",type=str,help = 'default generate name')
+    parse.add_argument('--video_path', default="/mnt/e/Li Lab/CVPR_rebuttal_/BIAS-a-Biologically-Inspired-Algorithm-for-video-Saliency-detection/example_data/demo.AVI", type=str, help='path of sample video') 
+    parse.add_argument('--generate_name',default = "anyway.mp4",type=str,help = 'default generate name')
     parse.add_argument('--total_height',default=9,type=int,help='total height of orientation pyramid, equals to height of gaussian pyramid + kernel size Pyramid,Itti default is 9')
     parse.add_argument('--pyramid_height', default=5, type=int, help='height of Gaussian Pyramid, tried maximum param is 5')
     # parse.add_argument('--gabor_kernel_size',default=33,type=int,help='the minimal value of gabor kernel size. when meet some constrains, we would double some params.')
