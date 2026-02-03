@@ -1,6 +1,10 @@
 # BIAS: a Biologically Inspired Algorithm for video Saliency detection
 
-This is the official code repo for the work **BIAS: a Biologically Inspired Algorithm for Video Saliency Detection**. The code for running the BIAS is in the src folder. The codes to evaluate or to plot the results are in the  eval and analysis folders, respectively. The path in each file might be altered to the real path on the user's platform.
+This is the official code repo for the work **BIAS: a Biologically Inspired Algorithm for Video Saliency Detection**. The code for running the BIAS on CPU is in the `BIAS` folder, and a version that could be executed on Nvidia platform GPU through cupy is provided in the `BIAS_GPU` folder. A [open-source cuda-based convolution method](https://github.com/elcruzo/cuda-conv) is applied in our code. The codes to evaluate or to plot the results are in the eval and analysis folders, respectively. The path in each file should be altered to the real path on the user's platform.
+
+The code to train Spark&MSTCN code is also provided in the Spark and MSTCN folder. Other codes for traffic anticipation, including [DSTA](https://github.com/monjurulkarim/DSTA), [DRIVE](https://github.com/Cogito2012/DRIVE) and [UString](https://github.com/Cogito2012/UString), are included and modified in the `TrafficAnticipationCodes`. These codes need to be executed in `CUDA 9.8-10.2` environments, due to their usage of [mmdetection v1.0.0](https://github.com/open-mmlab/mmdetection/releases/tag/v1.0.0), which onlu support `Kepler, Maxwell, Pascal, Volta,` and `Turing` architecture.
+
+To inference using [Salfom](https://github.com/mr17m/SalFoM---Video-Saliency-Prediction) model, you may refer to [this repo](https://github.com/Zhang-Zhaoji/Full-SalFoM) with essential running files.
 
 ---
 
@@ -11,17 +15,18 @@ A demo has been added to the repository. You may clone the repository and simply
 To convert only one RGB video into an `.mp4` saliency map, just run:
 
 ```bash
-cd ./src
+cd ./BIAS/
 python ./main.py --video_path 'YOUR_VIDEO_PATH' --generate_name 'YOUR_TARGET_OUTPUT_PATH'
 ```
+
 Since we use the `OpenCV` video stream to load images, it is convenient to use any camera as long as it can be loaded through `OpenCV` or turned into a video stream input.
 
 If you want to process multiple videos, please use `src/batch.py`. The `images2images` mode is also available in `batch.py` and `main.py`; you may refer to the `argparse - help` code blocks for more information. 
 
-We also have a code to process batches of images through `batch.py`. Currently, we only support manually changing the target directory and processing modes(image, motion, both, GWTA/MGF, or flicker). The default pool size is set to 4 in case of the memory overflow error on personal devices, achieving a 100 fps processing rate. If running on high-performance platforms, users might need to manually set a larger pool size. 
+We also have a code to process batches of images through `batch.py`. Currently, we only support manually changing the target directory and processing modes(image, motion, both, GWTA/MGF, flicker or other methods). The default pool size is set to 4 in case of the memory overflow error on personal devices, achieving a 100 fps processing rate. If running on high-performance platforms, users might need to manually set a larger pool size. 
 
 ```bash
-cd ./src
+cd ./BIAS/
 python ./batch.py
 ```
 

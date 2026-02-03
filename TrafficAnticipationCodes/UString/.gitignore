@@ -1,0 +1,15 @@
+.idea
+.pytest_cache
+.vscode
+*.pyc
+logs/
+*output*
+log*
+runs
+src/__pycache__
+script/savedlogs
+script/res
+data/mmdetection*
+*.mp4
+*_tmp*
+lib/*
