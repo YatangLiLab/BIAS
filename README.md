@@ -35,3 +35,20 @@ python ./batch.py
 ---
 
 The training code, inference code, evaluation script, model configs, and some of the models are stored in the folder `MSTCN`. Currently, we do not provide the link to the dataset, but you may check and download it using `MSTCN/download_video.py` and convert it into `.npy` files for training.
+
+---
+
+We provide the trained weights for the Spark-MSTCN models mentioned in the article through the Baidu Yun Netdisk. You may download them through the following link or click [this](https://pan.baidu.com/s/1kghhTqMRNG7gIwTXlkBAAg?pwd=1234). The available Cause-effect dataset is also provided in the folder online.
+
+```
+link: https://pan.baidu.com/s/1kghhTqMRNG7gIwTXlkBAAg?pwd=1234 
+password: 1234 
+```
+
+---
+
+If you want to cite our work, please use the following bibtex:
+
+```
+Just joking, we do not have a published paper yet.
+```
