@@ -1,0 +1,300 @@
+[08-02 17:10:20] (pretrain/main.py        , line  40)=> initial args:
+{'ada': 0.0,
+ 'base_lr': 0.0002,
+ 'batch_size_per_gpu': 8,
+ 'bs': 8,
+ 'clip': 5.0,
+ 'cmd': '',
+ 'commit_id': 'a63e386f8e5186bc07ad7fce86e06b08f48a61ea',
+ 'commit_msg': '[fix] (#58) fix default hyperparameters',
+ 'cur_ep': '',
+ 'data_path': 'Dataset',
+ 'dataloader_workers': 4,
+ 'densify_norm': '',
+ 'device': device(type='cuda', index=0),
+ 'dp': 0.0,
+ 'ep': 1600,
+ 'exp_dir': '/mnt/e/Li Lab/SparK/SparK/ExpDir',
+ 'exp_name': 'ResNet18_example',
+ 'finish_time': '',
+ 'first_logging': True,
+ 'glb_batch_size': 8,
+ 'init_weight': '',
+ 'input_size': 224,
+ 'is_convnext': False,
+ 'is_resnet': False,
+ 'last_loss': 0.0,
+ 'local_rank': 0,
+ 'log_epoch': <bound method Args.log_epoch of Args(prog='main.py', usage=None, description=None, formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)>,
+ 'log_txt_name': '/mnt/e/Li Lab/SparK/SparK/ExpDir/pretrain_log.txt',
+ 'lr': 6.25e-06,
+ 'mask': 0.6,
+ 'model': 'SaliencyMap',
+ 'opt': 'lamb',
+ 'remain_time': '',
+ 'resume_from': '',
+ 'sbn': False,
+ 'tb_lg_dir': '/mnt/e/Li Lab/SparK/SparK/ExpDir/tensorboard_log',
+ 'wd': 0.04,
+ 'wde': 0.2,
+ 'wp_ep': 40}
+[08-02 17:10:20] (pretrain/main.py        , line  44)=> [build data for pre-training] ...
+
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  85)=> Transform [pre-train] = 
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  87)=> Grayscale(num_output_channels=1)
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  87)=> RandomResizedCrop(size=(224, 224), scale=(0.67, 1.0), ratio=(0.75, 1.3333), interpolation=bicubic)
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  87)=> RandomHorizontalFlip(p=0.5)
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  87)=> ToTensor()
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  87)=> Normalize(mean=0.27, std=0.27)
+[08-02 17:10:20] (etrain/utils/imagenet.py, line  88)=> ---------------------------
+
+[08-02 17:10:21] (pretrain/main.py        , line  54)=> [dataloader] gbs=8, lbs=8, iters_train=916
+[08-02 17:10:21] (train/models/__init__.py, line  57)=> [build_sparse_encoder] model kwargs={'pretrained': False, 'num_classes': 0, 'global_pool': ''}
+[08-02 17:10:22] (/SparK/pretrain/spark.py, line  67)=> [SparK.__init__, densify 1/4]: densify_proj(ksz=1, #para=0.39M)
+[08-02 17:10:22] (/SparK/pretrain/spark.py, line  67)=> [SparK.__init__, densify 2/4]: densify_proj(ksz=3, #para=0.89M)
+[08-02 17:10:22] (/SparK/pretrain/spark.py, line  67)=> [SparK.__init__, densify 3/4]: densify_proj(ksz=3, #para=0.22M)
+[08-02 17:10:22] (/SparK/pretrain/spark.py, line  67)=> [SparK.__init__, densify 4/4]: densify_proj(ksz=3, #para=0.06M)
+[08-02 17:10:22] (/SparK/pretrain/spark.py, line  73)=> [SparK.__init__] dims of mask_tokens=(512, 256, 128, 64)
+[08-02 17:10:22] (pretrain/main.py        , line  63)=> [PT model] model = 
+[SparK.config]: {'dense_decoder.width': 768, 'densify_norm_str': '', 'hierarchy': 4, 'mask_ratio': 0.6, 'sbn': False, 'sparse_encoder.input_size': 224}
+[SparK.structure]: (
+  (sparse_encoder): SparseEncoder(
+    (sp_cnn): SaliencyMapConvNet(
+      (backbone): ResNet(
+        (conv1): SparseConv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        (bn1): SparseBatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act1): ReLU(inplace=True)
+        (maxpool): SparseMaxPooling(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+        (layer1): Sequential(
+          (0): BasicBlock(
+            (conv1): SparseConv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+          )
+          (1): BasicBlock(
+            (conv1): SparseConv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+          )
+        )
+        (layer2): Sequential(
+          (0): BasicBlock(
+            (conv1): SparseConv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+            (downsample): Sequential(
+              (0): SparseConv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+              (1): SparseBatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            )
+          )
+          (1): BasicBlock(
+            (conv1): SparseConv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+          )
+        )
+        (layer3): Sequential(
+          (0): BasicBlock(
+            (conv1): SparseConv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+            (downsample): Sequential(
+              (0): SparseConv2d(128, 256, kernel_size=(1, 1), stride=(2, 2), bias=False)
+              (1): SparseBatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            )
+          )
+          (1): BasicBlock(
+            (conv1): SparseConv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+          )
+        )
+        (layer4): Sequential(
+          (0): BasicBlock(
+            (conv1): SparseConv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+            (downsample): Sequential(
+              (0): SparseConv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+              (1): SparseBatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            )
+          )
+          (1): BasicBlock(
+            (conv1): SparseConv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn1): SparseBatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act1): ReLU(inplace=True)
+            (conv2): SparseConv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+            (bn2): SparseBatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            (act2): ReLU(inplace=True)
+          )
+        )
+        (global_pool): SelectAdaptivePool2d (pool_type=avg, flatten=Flatten(start_dim=1, end_dim=-1))
+        (fc): Identity()
+      )
+      (classifier): Linear(in_features=25088, out_features=1024, bias=True)
+    )
+  )
+  (dense_decoder): LightDecoder(
+    width=768
+    (dec): ModuleList(
+      (0): UNetBlock(
+        (up_sample): ConvTranspose2d(768, 768, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1))
+        (conv): Sequential(
+          (0): Conv2d(768, 768, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (1): BatchNorm2d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (2): ReLU6(inplace=True)
+          (3): Conv2d(768, 384, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (4): BatchNorm2d(384, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): UNetBlock(
+        (up_sample): ConvTranspose2d(384, 384, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1))
+        (conv): Sequential(
+          (0): Conv2d(384, 384, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (1): BatchNorm2d(384, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (2): ReLU6(inplace=True)
+          (3): Conv2d(384, 192, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (4): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (2): UNetBlock(
+        (up_sample): ConvTranspose2d(192, 192, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1))
+        (conv): Sequential(
+          (0): Conv2d(192, 192, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (1): BatchNorm2d(192, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (2): ReLU6(inplace=True)
+          (3): Conv2d(192, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (4): BatchNorm2d(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (3): UNetBlock(
+        (up_sample): ConvTranspose2d(96, 96, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1))
+        (conv): Sequential(
+          (0): Conv2d(96, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (1): BatchNorm2d(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (2): ReLU6(inplace=True)
+          (3): Conv2d(96, 48, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (4): BatchNorm2d(48, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (4): UNetBlock(
+        (up_sample): ConvTranspose2d(48, 48, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1))
+        (conv): Sequential(
+          (0): Conv2d(48, 48, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (1): BatchNorm2d(48, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (2): ReLU6(inplace=True)
+          (3): Conv2d(48, 24, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+          (4): BatchNorm2d(24, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+    )
+    (proj): Conv2d(24, 1, kernel_size=(1, 1), stride=(1, 1))
+  )
+  (densify_norms): ModuleList(
+    (0): Identity()
+    (1): Identity()
+    (2): Identity()
+    (3): Identity()
+  )
+  (densify_projs): ModuleList(
+    (0): Conv2d(512, 768, kernel_size=(1, 1), stride=(1, 1))
+    (1): Conv2d(256, 384, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (2): Conv2d(128, 192, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (3): Conv2d(64, 96, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  )
+  (mask_tokens): ParameterList(
+      (0): Parameter containing: [torch.cuda.FloatTensor of size 1x512x1x1 (GPU 0)]
+      (1): Parameter containing: [torch.cuda.FloatTensor of size 1x256x1x1 (GPU 0)]
+      (2): Parameter containing: [torch.cuda.FloatTensor of size 1x128x1x1 (GPU 0)]
+      (3): Parameter containing: [torch.cuda.FloatTensor of size 1x64x1x1 (GPU 0)]
+  )
+)
+
+[08-02 17:10:22] (rain/utils/lr_control.py, line  52)=> [get_ft_param_groups] param groups = 
+{ 'decay': { 'lr_scale': 1.0,
+             'params': "('sparse_encoder.sp_cnn.backbone.conv1.weight, sparse_encoder.sp_cnn.backbone.layer1.0.conv1.weight, sparse_encoder.sp_cnn.backbone.layer1.0.conv2.weight, '\n"
+                       " 'sparse_encoder.sp_cnn.backbone.layer1.1.conv1.weight, sparse_encoder.sp_cnn.backbone.layer1.1.conv2.weight, sparse_encoder.sp_cnn.backbone.layer2.0.conv1.weight, '\n"
+                       " 'sparse_encoder.sp_cnn.backbone.layer2.0.conv2.weight, sparse_encoder.sp_cnn.backbone.layer2.0.downsample.0.weight, sparse_encoder.sp_cnn.backbone.layer2.1.conv1.weight, '\n"
+                       " 'sparse_encoder.sp_cnn.backbone.layer2.1.conv2.weight, sparse_encoder.sp_cnn.backbone.layer3.0.conv1.weight, sparse_encoder.sp_cnn.backbone.layer3.0.conv2.weight, '\n"
+                       " 'sparse_encoder.sp_cnn.backbone.layer3.0.downsample.0.weight, sparse_encoder.sp_cnn.backbone.layer3.1.conv1.weight, sparse_encoder.sp_cnn.backbone.layer3.1.conv2.weight, '\n"
+                       " 'sparse_encoder.sp_cnn.backbone.layer4.0.conv1.weight, sparse_encoder.sp_cnn.backbone.layer4.0.conv2.weight, sparse_encoder.sp_cnn.backbone.layer4.0.downsample.0.weight, '\n"
+                       " 'sparse_encoder.sp_cnn.backbone.layer4.1.conv1.weight, sparse_encoder.sp_cnn.backbone.layer4.1.conv2.weight, sparse_encoder.sp_cnn.classifier.weight, dense_decoder.dec.0.up_sample.weight, '\n"
+                       " 'dense_decoder.dec.0.conv.0.weight, dense_decoder.dec.0.conv.3.weight, dense_decoder.dec.1.up_sample.weight, dense_decoder.dec.1.conv.0.weight, dense_decoder.dec.1.conv.3.weight, '\n"
+                       " 'dense_decoder.dec.2.up_sample.weight, dense_decoder.dec.2.conv.0.weight, dense_decoder.dec.2.conv.3.weight, dense_decoder.dec.3.up_sample.weight, dense_decoder.dec.3.conv.0.weight, '\n"
+                       " 'dense_decoder.dec.3.conv.3.weight, dense_decoder.dec.4.up_sample.weight, dense_decoder.dec.4.conv.0.weight, dense_decoder.dec.4.conv.3.weight, dense_decoder.proj.weight, densify_projs.0.weight, '\n"
+                       " 'densify_projs.1.weight, densify_projs.2.weight, densify_projs.3.weight')",
+             'weight_decay_scale': 1.0},
+  'no_decay': { 'lr_scale': 1.0,
+                'params': "('sparse_encoder.sp_cnn.backbone.bn1.weight, sparse_encoder.sp_cnn.backbone.bn1.bias, sparse_encoder.sp_cnn.backbone.layer1.0.bn1.weight, sparse_encoder.sp_cnn.backbone.layer1.0.bn1.bias, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer1.0.bn2.weight, sparse_encoder.sp_cnn.backbone.layer1.0.bn2.bias, sparse_encoder.sp_cnn.backbone.layer1.1.bn1.weight, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer1.1.bn1.bias, sparse_encoder.sp_cnn.backbone.layer1.1.bn2.weight, sparse_encoder.sp_cnn.backbone.layer1.1.bn2.bias, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer2.0.bn1.weight, sparse_encoder.sp_cnn.backbone.layer2.0.bn1.bias, sparse_encoder.sp_cnn.backbone.layer2.0.bn2.weight, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer2.0.bn2.bias, sparse_encoder.sp_cnn.backbone.layer2.0.downsample.1.weight, sparse_encoder.sp_cnn.backbone.layer2.0.downsample.1.bias, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer2.1.bn1.weight, sparse_encoder.sp_cnn.backbone.layer2.1.bn1.bias, sparse_encoder.sp_cnn.backbone.layer2.1.bn2.weight, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer2.1.bn2.bias, sparse_encoder.sp_cnn.backbone.layer3.0.bn1.weight, sparse_encoder.sp_cnn.backbone.layer3.0.bn1.bias, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer3.0.bn2.weight, sparse_encoder.sp_cnn.backbone.layer3.0.bn2.bias, sparse_encoder.sp_cnn.backbone.layer3.0.downsample.1.weight, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer3.0.downsample.1.bias, sparse_encoder.sp_cnn.backbone.layer3.1.bn1.weight, sparse_encoder.sp_cnn.backbone.layer3.1.bn1.bias, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer3.1.bn2.weight, sparse_encoder.sp_cnn.backbone.layer3.1.bn2.bias, sparse_encoder.sp_cnn.backbone.layer4.0.bn1.weight, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer4.0.bn1.bias, sparse_encoder.sp_cnn.backbone.layer4.0.bn2.weight, sparse_encoder.sp_cnn.backbone.layer4.0.bn2.bias, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer4.0.downsample.1.weight, sparse_encoder.sp_cnn.backbone.layer4.0.downsample.1.bias, sparse_encoder.sp_cnn.backbone.layer4.1.bn1.weight, '\n"
+                          " 'sparse_encoder.sp_cnn.backbone.layer4.1.bn1.bias, sparse_encoder.sp_cnn.backbone.layer4.1.bn2.weight, sparse_encoder.sp_cnn.backbone.layer4.1.bn2.bias, sparse_encoder.sp_cnn.classifier.bias, '\n"
+                          " 'dense_decoder.dec.0.up_sample.bias, dense_decoder.dec.0.conv.1.weight, dense_decoder.dec.0.conv.1.bias, dense_decoder.dec.0.conv.4.weight, dense_decoder.dec.0.conv.4.bias, '\n"
+                          " 'dense_decoder.dec.1.up_sample.bias, dense_decoder.dec.1.conv.1.weight, dense_decoder.dec.1.conv.1.bias, dense_decoder.dec.1.conv.4.weight, dense_decoder.dec.1.conv.4.bias, '\n"
+                          " 'dense_decoder.dec.2.up_sample.bias, dense_decoder.dec.2.conv.1.weight, dense_decoder.dec.2.conv.1.bias, dense_decoder.dec.2.conv.4.weight, dense_decoder.dec.2.conv.4.bias, '\n"
+                          " 'dense_decoder.dec.3.up_sample.bias, dense_decoder.dec.3.conv.1.weight, dense_decoder.dec.3.conv.1.bias, dense_decoder.dec.3.conv.4.weight, dense_decoder.dec.3.conv.4.bias, '\n"
+                          " 'dense_decoder.dec.4.up_sample.bias, dense_decoder.dec.4.conv.1.weight, dense_decoder.dec.4.conv.1.bias, dense_decoder.dec.4.conv.4.weight, dense_decoder.dec.4.conv.4.bias, dense_decoder.proj.bias, '\n"
+                          " 'densify_projs.0.bias, densify_projs.1.bias, densify_projs.2.bias, densify_projs.3.bias, mask_tokens.0, mask_tokens.1, mask_tokens.2, mask_tokens.3')",
+                'weight_decay_scale': 0.0}}
+
+[08-02 17:10:22] (K/pretrain/utils/lamb.py, line  63)=> [lamb1] max_grad_norm=5.0
+[08-02 17:10:22] (pretrain/main.py        , line  82)=> [optimizer] optimizer(functools.partial(<class 'utils.lamb.TheSameAsTimmLAMB'>, betas=(0.9, 0.0), max_grad_norm=5.0)) =TheSameAsTimmLAMB (
+Parameter Group 0
+    always_adapt: False
+    betas: (0.9, 0.0)
+    bias_correction: True
+    eps: 1e-06
+    grad_averaging: True
+    lr: 6.25e-06
+    lr_scale: 1.0
+    max_grad_norm: 5.0
+    trust_clip: False
+    weight_decay: 0.0
+    weight_decay_scale: 1.0
+
+Parameter Group 1
+    always_adapt: False
+    betas: (0.9, 0.0)
+    bias_correction: True
+    eps: 1e-06
+    grad_averaging: True
+    lr: 6.25e-06
+    lr_scale: 1.0
+    max_grad_norm: 5.0
+    trust_clip: False
+    weight_decay: 0.0
+    weight_decay_scale: 0.0
+)
+
+[08-02 17:10:22] (pretrain/main.py        , line  92)=> [PT start] from ep0
+[08-02 17:10:27] (K/pretrain/utils/misc.py, line 317)=> [PT] Epoch 0:  [  0/916]  eta: 1:19:59  max_lr: 0.00000  last_loss: 1.0026 (1.0026)  orig_norm: 0.7478 (0.7478)  iter: 5.2399s  data: 0.0011s

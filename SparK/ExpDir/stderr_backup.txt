@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "pretrain/main.py", line 191, in <module>
+    main_pt()
+  File "pretrain/main.py", line 101, in main_pt
+    stats = pre_train_one_ep(ep, args, tb_lg, itrt_train, iters_train, model, optimizer)
+  File "pretrain/main.py", line 157, in pre_train_one_ep
+    loss = model(inp, active_b1ff=None, vis=False)
+  File "/home/zhaojizhang/miniconda3/envs/openmmlab/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "pretrain/main.py", line 35, in forward
+    return self.module(*args, **kwargs)
+  File "/home/zhaojizhang/miniconda3/envs/openmmlab/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/mnt/e/Li Lab/SparK/SparK/pretrain/spark.py", line 107, in forward
+    bcff: torch.Tensor = self.densify_projs[i](bcff)
+  File "/home/zhaojizhang/miniconda3/envs/openmmlab/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/zhaojizhang/miniconda3/envs/openmmlab/lib/python3.8/site-packages/torch/nn/modules/conv.py", line 446, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/home/zhaojizhang/miniconda3/envs/openmmlab/lib/python3.8/site-packages/torch/nn/modules/conv.py", line 442, in _conv_forward
+    return F.conv2d(input, weight, bias, self.stride,
+KeyboardInterrupt
