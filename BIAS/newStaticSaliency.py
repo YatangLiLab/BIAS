@@ -470,7 +470,7 @@ if __name__ == "__main__":
     test code
     """
     # image = cv2.imread("E:\\your_path\\test_jpgs\\bar.jpg")
-    path = 'C:\\Users\\10690\\Pictures\\sample_image.jpg'
+    path = "E:\\your_path\\test_jpgs\\bar.jpg"
     main(cv2.imread(path),args)
     quit()
     path = 'E:\\your_path\\self_designed_test_image\\re_design'#"E:\\your_path\\self_designed_test_image\\design\\tmp_save"
